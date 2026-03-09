@@ -12,6 +12,7 @@ class TaskBase(BaseModel):
     task_title: str = Field(..., min_length=5, max_length=100)
     task_description: str = Field(..., min_length=10, max_length=100000)
     submitted_by: str = Field(..., min_length=2, max_length=50)
+    github_repo_link: str = Field(..., description="Link to the repository")
 
     @field_validator('task_title', 'task_description', 'submitted_by')
     @classmethod
@@ -27,6 +28,7 @@ class TaskCreate(TaskBase):
 class Task(TaskBase):
     task_id: str
     timestamp: datetime
+    pdf_extracted_text: Optional[str] = None
 
 class Analysis(BaseModel):
     technical_quality: int = Field(..., ge=0, le=100)
@@ -52,6 +54,16 @@ class ReviewOutput(BaseModel):
     analysis: Analysis
     meta: Meta
     next_task: Optional[V2NextTask] = Field(None, description="Recommended next task block")
+    feature_coverage: float = Field(default=0.0)
+    architecture_score: float = Field(default=0.0)
+    code_quality_score: float = Field(default=0.0)
+    completeness_score: float = Field(default=0.0)
+    missing_features: List[str] = Field(default_factory=list)
+    requirement_match: float = Field(default=0.0)
+    evaluation_summary: str = Field(default="")
+    documentation_score: float = Field(default=0.0)
+    documentation_alignment: str = Field(default="unknown")
+    analysis_pdf: Optional[dict] = Field(default=None)
 
 class NextTask(BaseModel):
     next_task_title: str

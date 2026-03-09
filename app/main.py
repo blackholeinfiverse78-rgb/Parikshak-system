@@ -6,7 +6,7 @@ Version: 1.1.1
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from .api import task_submit, task_review, next_task, orchestration
+from .api import task_submit, task_review, next_task, orchestration, lifecycle, tts
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import sys
@@ -80,6 +80,8 @@ app.include_router(task_submit.router, prefix="/api/v1/task", tags=["PROD"])
 app.include_router(task_review.router, prefix="/api/v1/task", tags=["PROD"])
 app.include_router(next_task.router, prefix="/api/v1/task", tags=["PROD"])
 app.include_router(orchestration.router, prefix="/api/v1/orchestration", tags=["V2-Autonomous"])
+app.include_router(lifecycle.router, prefix="/api/v1", tags=["Lifecycle"])
+app.include_router(tts.router, prefix="/api/v1", tags=["TTS"])
 
 
 @app.get("/")

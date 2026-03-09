@@ -1,51 +1,173 @@
-# Evaluation Logic & Scoring Engine
+# 📐 Evaluation Logic & Scoring Engine (v3.0)
 
-The `ReviewEngine` is the core intelligence of the system. It uses a deterministic, rule-based approach to score engineering tasks.
+> This document describes the **current** scoring system (v3.0). The earlier rule-based system (v1) that scored based on text length and keyword presence has been fully replaced.
 
-## Scoring Dimensions (Total 100 pts)
+---
 
-### 1. Title Context (15 Points)
-- **Goal**: Ensure the title is descriptive enough to stand alone.
-- **Logic**:
-    - `> 40 chars`: 15 pts (Professional depth)
-    - `> 20 chars`: 10 pts (Adequate)
-    - `< 20 chars`: 5 pts (Flags "Brief title reduces context")
+## Overview
 
-### 2. Description Substance (30 Points)
-- **Goal**: Ensure technical depth in the task body.
-- **Logic**:
-    - `> 500 chars`: 30 pts (Comprehensive)
-    - `> 200 chars`: 20 pts (Detailed)
-    - `> 50 chars`: 10 pts (Basic)
-    - `< 50 chars`: 0 pts (Flags "Minimal description substance")
+The evaluation engine determines how well a submitted GitHub repository fulfills the requirements defined across all submission inputs:
 
-### 3. Logical Markers (30 Points)
-- **Goal**: Identify standard engineering discipline signals.
-- **Logic**: Scans for the literal presence (case-insensitive) of:
-    - `requirement`: 10 pts
-    - `objective`: 10 pts
-    - `constraint`: 10 pts
-- Missing markers trigger specific `failure_reasons` and `improvement_hints`.
+- `task_title` — What needs to be built
+- `task_description` — How it should be built
+- `github_repo_link` — The actual implementation
+- `task_pdf_document` (optional) — Supplementary documentation
 
-### 4. Technical Specificity (25 Points)
-- **Goal**: Ensure the task mentions Implementation-level details.
-- **Keywords**: `api`, `database`, `schema`, `validation`, `security`, `async`, `cache`, `frontend`, `readme`, `documentation`, `test`, `coverage`.
-- **Logic**: `min(25, count(keywords_found) * 5)`.
-- Finding fewer than 2 keywords triggers "Low technical specificity".
+---
 
-## Result Normalization
+## Scoring Dimensions (Total: 100 Points)
 
-### Readiness Percentage
-- Calculated as `score * 0.85` for scores under 90.
-- High scores (90+) are treated as fully ready (`readiness_percent = score`).
+### 1. Requirement Match — 40 Points *(Primary Driver)*
 
-### Status Mapping
-- **PASS**: Score >= 85
-- **BORDERLINE**: Score 60 - 84
-- **FAIL**: Score < 60
+This is the most important dimension. It measures how closely the repository implementation satisfies the requirements extracted from the task inputs.
 
-### Analysis Metrics
-Calculated as percentages of their sub-components:
-- **Technical Quality**: (tech\_keywords\_score / 25) * 100
-- **Clarity**: ((title\_score + desc\_score) / 45) * 100
-- **Discipline Signals**: (marker\_score / 30) * 100
+**Sub-components:**
+
+| Sub-metric | Weight | How it's computed |
+|------------|--------|-------------------|
+| `feature_match_ratio` | 60% | What fraction of the expected features were found in repo files/components |
+| `tech_stack_match` | 20% | What fraction of the expected technologies appear in the repo's file extensions and naming |
+| `architecture_match` | 20% | Whether the repo's directory structure matches the expected architecture pattern |
+
+**Formula:**
+
+```
+req_match_ratio = (feature_match * 0.6) + (tech_stack_match * 0.2) + (architecture_match * 0.2)
+requirement_match_score = req_match_ratio × 40
+```
+
+**Alignment label:**
+
+| req_match_ratio | Label |
+|-----------------|-------|
+| > 0.8 | `high` |
+| 0.5 – 0.8 | `moderate` |
+| < 0.5 | `low` |
+
+---
+
+### 2. Repository Completeness — 20 Points
+
+Measures whether the repository has enough files relative to the task's complexity.
+
+**Complexity thresholds:**
+
+| Complexity | Min files for full score |
+|------------|--------------------------|
+| `low` | 3 files |
+| `medium` | 8 files |
+| `high` | 20 files |
+
+**Formula:**
+
+```
+completeness_ratio = min(total_files / threshold, 1.0)
+completeness_score = completeness_ratio × 20
+```
+
+---
+
+### 3. Architecture Quality — 20 Points
+
+Examines whether the repository follows recognized software architecture patterns.
+
+**Signals checked:**
+
+| Signal | Points | Description |
+|--------|--------|-------------|
+| `has_layers` | 0.4 | ≥ 3 top-level directories matching standard layer names (api, service, model, etc.) |
+| `modular` | 0.3 | Any subdirectory structure (not a single flat folder) |
+| `interface_usage` | 0.3 | Files containing "interface" or "abstract" in their path |
+
+**Formula:**
+
+```
+architecture_ratio = sum of signals (max 1.0)
+architecture_score = architecture_ratio × 20
+```
+
+---
+
+### 4. Code Quality — 10 Points
+
+Examines the quality signals present in the repository.
+
+**Signals:**
+
+| Signal | Points | Description |
+|--------|--------|-------------|
+| README depth | 0–0.6 | Score 0/1/2/3 based on README file size (absent/small/medium/large ×1000 bytes) |
+| Documentation density | 0.4 | `.md` files / total code files ratio > 0.1 |
+
+**Formula:**
+
+```
+quality_ratio = (readme_score / 3.0 × 0.6) + (0.4 if density > 0.1)
+quality_score = quality_ratio × 10
+```
+
+---
+
+### 5. PDF Documentation Alignment — 10 Points
+
+Only applies when a PDF document is submitted. Evaluates whether the documentation is substantive.
+
+**Signals:**
+
+| Signal | Points | Condition |
+|--------|--------|-----------|
+| Text depth | 0.4 | PDF text length > 2000 chars |
+| Text depth (partial) | 0.2 | PDF text length 500–2000 chars |
+| Architecture description | 0.3 | Architecture section found in PDF |
+| Feature listing | 0.3 | ≥ 3 documented features in PDF |
+
+**Formula:**
+
+```
+doc_ratio = sum of signals (max 1.0)
+documentation_score = doc_ratio × 10
+```
+
+---
+
+## Full Score Formula
+
+```
+total_score = requirement_match_score   (0–40)
+            + completeness_score         (0–20)
+            + architecture_score         (0–20)
+            + quality_score              (0–10)
+            + documentation_score        (0–10)
+            ──────────────────────────────────
+            = 0 to 100
+```
+
+---
+
+## Status Mapping
+
+| Score | Status |
+|-------|--------|
+| ≥ 80 | ✅ `pass` |
+| 50–79 | ⚠️ `borderline` |
+| < 50 | ❌ `fail` |
+
+---
+
+## Missing Feature Detection
+
+Any feature listed in the `expected_features` array (Step 1 output) that could **not** be matched to any component in the repository analysis becomes a **missing feature**.
+
+These appear in:
+
+- `failure_reasons` (top 3, shown to user)
+- `missing_features` (full list, stored in `ReviewRecord`)
+- `improvement_hints` (each prefixed with `"Improve: "`)
+
+---
+
+## Determinism Guarantee
+
+The same `task_title`, `task_description`, `github_repo_link`, and `pdf_text` inputs **always produce the same score**. There are no random elements, LLM calls, or time-based components in the scoring equation.
+
+> The only non-deterministic factor: if the GitHub repository changes between evaluations (new files added), the repo signals will differ — which is expected and correct behaviour.

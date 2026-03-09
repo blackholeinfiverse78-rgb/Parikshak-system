@@ -1,15 +1,48 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Environment files — never commit secrets
 .env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.env
+
+# Python virtual environments
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 .DS_Store
+
+# Test artifacts
+*.mp3
+*.wav
+test_tts.mp3
+
+# Frontend build
+frontend/node_modules/
+frontend/build/
+frontend/.cache/
+node_modules/
+build/
+
+# PDF uploads (user data — not for version control)
+storage/uploads/
+
+# Pytest cache
+.pytest_cache/
+
+# Python bytecode
+*.pyo
+*.pyd
