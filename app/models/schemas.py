@@ -12,7 +12,8 @@ class TaskBase(BaseModel):
     task_title: str = Field(..., min_length=5, max_length=100)
     task_description: str = Field(..., min_length=10, max_length=100000)
     submitted_by: str = Field(..., min_length=2, max_length=50)
-    github_repo_link: str = Field(..., description="Link to the repository")
+    module_id: str = Field(default="task-review-agent", description="Module identifier for registry validation")
+    schema_version: str = Field(default="v1.0", description="Schema version for compatibility validation")
 
     @field_validator('task_title', 'task_description', 'submitted_by')
     @classmethod
@@ -29,6 +30,7 @@ class Task(TaskBase):
     task_id: str
     timestamp: datetime
     pdf_extracted_text: Optional[str] = None
+    github_repo_link: Optional[str] = None  # Maintain backward compatibility
 
 class Analysis(BaseModel):
     technical_quality: int = Field(..., ge=0, le=100)
