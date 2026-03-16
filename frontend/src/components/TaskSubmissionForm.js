@@ -8,6 +8,8 @@ const TaskSubmissionForm = ({ onSubmit, isLoading }) => {
         task_title: '',
         task_description: '',
         github_repo_link: '',
+        module_id: 'core-development',
+        schema_version: '1.0',
         pdf_file: null
     });
 
@@ -90,6 +92,26 @@ const TaskSubmissionForm = ({ onSubmit, isLoading }) => {
                         placeholder="https://github.com/username/repo"
                         className="input-field"
                     />
+                </div>
+
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        <Type size={16} className="text-blue-500" />
+                        Blueprint Registry Module
+                    </label>
+                    <select
+                        required
+                        name="module_id"
+                        value={formData.module_id}
+                        onChange={handleChange}
+                        className="input-field"
+                    >
+                        <option value="core-development">Core Development</option>
+                        <option value="advanced-features">Advanced Features</option>
+                        <option value="system-integration">System Integration</option>
+                        <option value="performance-optimization">Performance Optimization</option>
+                        <option value="security-implementation">Security Implementation</option>
+                    </select>
                 </div>
 
                 <div>

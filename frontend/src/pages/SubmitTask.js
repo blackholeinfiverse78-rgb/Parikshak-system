@@ -44,8 +44,8 @@ const SubmitTask = () => {
             </div>
 
             <div className="flex items-center justify-between px-6 py-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl text-xs font-bold text-slate-400 uppercase tracking-widest">
-                <span>Lifecycle Phase: Submission</span>
-                <span>Secure HTTPS Connection</span>
+                <span>Registry-Aware Evaluation System</span>
+                <span>Dynamic Scoring • Blueprint Validated</span>
             </div>
         </div>
     );

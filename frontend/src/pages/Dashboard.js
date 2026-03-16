@@ -125,7 +125,7 @@ const Dashboard = () => {
                         <div className="space-y-2">
                             <h3 className="text-2xl font-black text-white">Ready to level up?</h3>
                             <p className="text-blue-100 text-sm leading-relaxed">
-                                Submit your project code for an autonomous AI review. Get instant feedback and your next skill-appropriate task.
+                                Submit your project for registry-aware evaluation. Get dynamic scoring across title, description, and repository analysis with Blueprint Registry validation.
                             </p>
                         </div>
                         <Button onClick={() => navigate('/submit')} className="w-full bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-none border-none">
