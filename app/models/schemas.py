@@ -66,6 +66,9 @@ class ReviewOutput(BaseModel):
     documentation_score: float = Field(default=0.0)
     documentation_alignment: str = Field(default="unknown")
     analysis_pdf: Optional[dict] = Field(default=None)
+    title_score: float = Field(default=0.0)
+    description_score: float = Field(default=0.0)
+    repository_score: float = Field(default=0.0)
 
 class NextTask(BaseModel):
     next_task_title: str

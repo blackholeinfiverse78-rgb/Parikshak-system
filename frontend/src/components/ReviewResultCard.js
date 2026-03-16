@@ -37,26 +37,32 @@ const ReviewResultCard = ({ review, taskId }) => {
                     <div className="w-full space-y-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400">
                             <span>Title Analysis</span>
-                            <span className="text-slate-600 dark:text-slate-300">{review?.title_analysis?.title_score?.toFixed(1) || 0}/20</span>
+                            <span className="text-slate-600 dark:text-slate-300">
+                                {review?.title_score != null ? review.title_score.toFixed(1) : (review?.feature_coverage != null ? (review.feature_coverage * 20).toFixed(1) : 0)}/20
+                            </span>
                         </div>
                         <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-blue-500" style={{ width: `${((review?.title_analysis?.title_score || 0) / 20) * 100}%` }} />
+                            <div className="h-full bg-blue-500" style={{ width: `${((review?.title_score ?? (review?.feature_coverage ?? 0) * 20) / 20) * 100}%` }} />
                         </div>
 
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400 pt-2">
                             <span>Description Analysis</span>
-                            <span className="text-slate-600 dark:text-slate-300">{review?.description_analysis?.description_score?.toFixed(1) || 0}/40</span>
+                            <span className="text-slate-600 dark:text-slate-300">
+                                {review?.description_score != null ? review.description_score.toFixed(1) : (review?.completeness_score != null ? review.completeness_score.toFixed(1) : 0)}/40
+                            </span>
                         </div>
                         <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500" style={{ width: `${((review?.description_analysis?.description_score || 0) / 40) * 100}%` }} />
+                            <div className="h-full bg-emerald-500" style={{ width: `${((review?.description_score ?? review?.completeness_score ?? 0) / 40) * 100}%` }} />
                         </div>
 
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400 pt-2">
                             <span>Repository Analysis</span>
-                            <span className="text-slate-600 dark:text-slate-300">{review?.repository_analysis?.repository_score?.toFixed(1) || 0}/40</span>
+                            <span className="text-slate-600 dark:text-slate-300">
+                                {review?.repository_score != null ? review.repository_score.toFixed(1) : (review?.architecture_score != null ? review.architecture_score.toFixed(1) : 0)}/40
+                            </span>
                         </div>
                         <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-purple-500" style={{ width: `${((review?.repository_analysis?.repository_score || 0) / 40) * 100}%` }} />
+                            <div className="h-full bg-purple-500" style={{ width: `${((review?.repository_score ?? review?.architecture_score ?? 0) / 40) * 100}%` }} />
                         </div>
                     </div>
                 </div>
@@ -112,24 +118,27 @@ const ReviewResultCard = ({ review, taskId }) => {
             )}
 
             {/* Score Breakdown Section */}
-            {review?.score_breakdown && (
+            {(review?.score > 0) && (
                 <div className="card bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                     <div className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Dynamic Score Breakdown</div>
                     <div className="grid md:grid-cols-3 gap-4">
                         <div className="text-center p-4 bg-white dark:bg-slate-800 rounded-lg">
-                            <div className="text-2xl font-bold text-blue-500">{review.title_analysis?.title_score?.toFixed(1) || 0}</div>
+                            <div className="text-2xl font-bold text-blue-500">
+                                {review?.title_score != null ? review.title_score.toFixed(1) : ((review?.feature_coverage ?? 0) * 20).toFixed(1)}
+                            </div>
                             <div className="text-xs text-slate-400 font-semibold">Title Analysis (20pts)</div>
-                            <div className="text-xs text-slate-500 mt-1">Keywords: {review.title_analysis?.technical_keywords?.length || 0}</div>
                         </div>
                         <div className="text-center p-4 bg-white dark:bg-slate-800 rounded-lg">
-                            <div className="text-2xl font-bold text-emerald-500">{review.description_analysis?.description_score?.toFixed(1) || 0}</div>
+                            <div className="text-2xl font-bold text-emerald-500">
+                                {(review?.description_score ?? review?.completeness_score ?? 0).toFixed(1)}
+                            </div>
                             <div className="text-xs text-slate-400 font-semibold">Description Analysis (40pts)</div>
-                            <div className="text-xs text-slate-500 mt-1">Depth: {((review.description_analysis?.content_depth || 0) * 100).toFixed(0)}%</div>
                         </div>
                         <div className="text-center p-4 bg-white dark:bg-slate-800 rounded-lg">
-                            <div className="text-2xl font-bold text-purple-500">{review.repository_analysis?.repository_score?.toFixed(1) || 0}</div>
+                            <div className="text-2xl font-bold text-purple-500">
+                                {(review?.repository_score ?? review?.architecture_score ?? 0).toFixed(1)}
+                            </div>
                             <div className="text-xs text-slate-400 font-semibold">Repository Analysis (40pts)</div>
-                            <div className="text-xs text-slate-500 mt-1">Quality: {((review.repository_analysis?.code_quality || 0) * 100).toFixed(0)}%</div>
                         </div>
                     </div>
                 </div>

@@ -2,17 +2,13 @@ import apiClient from './apiClient';
 
 export const taskService = {
     submitTask: async (data) => {
-        // Construct bundled description for ReviewEngine markers
-        let bundledDescription = data.task_description;
-        if (data.github_repo_link) {
-            bundledDescription += `\n\n--- GitHub Repository Metrics ---\n{ "url": "${data.github_repo_link}" }`;
-        }
-
         const formData = new FormData();
         formData.append('task_title', data.task_title);
-        formData.append('task_description', bundledDescription);
+        formData.append('task_description', data.task_description);
         formData.append('submitted_by', data.submitted_by || 'Developer');
         formData.append('github_repo_link', data.github_repo_link || '');
+        formData.append('module_id', data.module_id || 'task-review-agent');
+        formData.append('schema_version', 'v1.0');
 
         if (data.previous_task_id) {
             formData.append('previous_task_id', data.previous_task_id);

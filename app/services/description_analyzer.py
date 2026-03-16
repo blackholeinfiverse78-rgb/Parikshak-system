@@ -37,14 +37,20 @@ class DescriptionAnalyzer:
         
         # Calculate metrics
         technical_term_ratio = self._calculate_technical_ratio(words)
-        step_indicator_count = self._count_step_indicators(words)
+        step_indicator_count = self._count_step_indicators(words, description)
         code_block_count = self._count_code_blocks(description)
         section_headers = self._count_section_headers(description)
         
-        # Derived metrics
-        depth_score = min(word_count / 300, 1.0)
-        structure_score = min((section_headers + step_indicator_count) / 10, 1.0)
-        technical_density = technical_term_ratio
+        # depth: markdown descriptions are token-sparse; 150 words is a solid threshold
+        depth_score = min(word_count / 150, 1.0)
+
+        # structure: headers + numbered/bulleted list items, normalised over 8
+        structure_score = min((section_headers + step_indicator_count) / 8, 1.0)
+
+        # technical density: cap ratio at 0.25 (25% tech terms is excellent) -> scale to 1.0
+        technical_density = min(technical_term_ratio / 0.25, 1.0)
+
+        # clarity: markdown-heavy text has many short lines; use a lenient band
         clarity_score = self._calculate_clarity_score(sentence_count, word_count)
         
         # Dynamic description score formula
@@ -87,9 +93,12 @@ class DescriptionAnalyzer:
         technical_count = sum(1 for word in words if word in self.technical_terms)
         return technical_count / len(words)
     
-    def _count_step_indicators(self, words: List[str]) -> int:
-        """Count step/process indicators in description"""
-        return sum(1 for word in words if word in self.step_indicators)
+    def _count_step_indicators(self, words: List[str], description: str = "") -> int:
+        """Count step/process indicators including numbered list items"""
+        word_hits = sum(1 for word in words if word in self.step_indicators)
+        # Count numbered list lines: lines starting with '1.' '2.' etc.
+        numbered_items = len(re.findall(r'^\s*\d+\.', description, re.MULTILINE))
+        return word_hits + numbered_items
     
     def _count_code_blocks(self, description: str) -> int:
         """Count code blocks (``` or ` patterns)"""
@@ -116,13 +125,11 @@ class DescriptionAnalyzer:
         """Calculate clarity based on sentence/word ratio"""
         if word_count == 0:
             return 0.0
-        
-        # Optimal range: 15-25 words per sentence
+        # Markdown descriptions have many short lines; use a wider acceptable band
         avg_words_per_sentence = word_count / max(sentence_count, 1)
-        
-        if 15 <= avg_words_per_sentence <= 25:
+        if 8 <= avg_words_per_sentence <= 30:
             return 1.0
-        elif 10 <= avg_words_per_sentence < 15 or 25 < avg_words_per_sentence <= 35:
+        elif 5 <= avg_words_per_sentence < 8 or 30 < avg_words_per_sentence <= 40:
             return 0.7
         else:
             return 0.4

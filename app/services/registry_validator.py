@@ -44,6 +44,51 @@ class RegistryValidator:
                 "created_at": "2026-02-01",
                 "updated_at": "2026-02-05"
             },
+            "core-development": {
+                "module_id": "core-development",
+                "lifecycle_stage": LifecycleStage.PRODUCTION,
+                "schema_version": "v1.0",
+                "status": "active",
+                "allowed_operations": ["submit", "review", "assign"],
+                "created_at": "2026-02-01",
+                "updated_at": "2026-02-05"
+            },
+            "advanced-features": {
+                "module_id": "advanced-features",
+                "lifecycle_stage": LifecycleStage.PRODUCTION,
+                "schema_version": "v1.0",
+                "status": "active",
+                "allowed_operations": ["submit", "review", "assign"],
+                "created_at": "2026-02-01",
+                "updated_at": "2026-02-05"
+            },
+            "system-integration": {
+                "module_id": "system-integration",
+                "lifecycle_stage": LifecycleStage.PRODUCTION,
+                "schema_version": "v1.0",
+                "status": "active",
+                "allowed_operations": ["submit", "review", "assign"],
+                "created_at": "2026-02-01",
+                "updated_at": "2026-02-05"
+            },
+            "performance-optimization": {
+                "module_id": "performance-optimization",
+                "lifecycle_stage": LifecycleStage.PRODUCTION,
+                "schema_version": "v1.0",
+                "status": "active",
+                "allowed_operations": ["submit", "review", "assign"],
+                "created_at": "2026-02-01",
+                "updated_at": "2026-02-05"
+            },
+            "security-implementation": {
+                "module_id": "security-implementation",
+                "lifecycle_stage": LifecycleStage.PRODUCTION,
+                "schema_version": "v1.0",
+                "status": "active",
+                "allowed_operations": ["submit", "review", "assign"],
+                "created_at": "2026-02-01",
+                "updated_at": "2026-02-05"
+            },
             "evaluation-engine": {
                 "module_id": "evaluation-engine", 
                 "lifecycle_stage": LifecycleStage.PRODUCTION,
@@ -175,9 +220,11 @@ class RegistryValidator:
         module_info = module_validation.module_info
         current_version = module_info["schema_version"]
         
-        # For now, we'll do exact version matching
-        # In production, this could support semantic versioning compatibility
-        if current_version != required_version:
+        # Normalise version: accept both "1.0" and "v1.0"
+        def _normalise(v: str) -> str:
+            return v if v.startswith('v') else f'v{v}'
+        
+        if _normalise(current_version) != _normalise(required_version):
             return ValidationResult(
                 status=ValidationStatus.INVALID,
                 reason=f"Schema version mismatch: module '{module_id}' has {current_version}, required {required_version}"

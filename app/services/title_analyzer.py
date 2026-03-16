@@ -26,15 +26,24 @@ class TitleAnalyzer:
         word_count = len(words)
         
         # Calculate metrics
-        title_word_count_score = min(word_count / 12, 1.0)
-        technical_keyword_ratio = self._calculate_technical_ratio(words)
+        # Optimal title length: 6-15 words. Peak at 8, full score 6-15, penalise outside.
+        if 6 <= word_count <= 15:
+            title_word_count_score = 1.0
+        elif word_count < 6:
+            title_word_count_score = word_count / 6
+        else:
+            title_word_count_score = max(0.5, 1.0 - (word_count - 15) * 0.05)
+
+        technical_keywords_found = self._get_technical_terms(words)
+        # Score by absolute count (capped at 4), not ratio — avoids penalising longer titles
+        tech_keyword_score = min(len(technical_keywords_found) / 4, 1.0)
         duplicate_penalty = self._calculate_duplicate_penalty(words)
         alignment_score = self._calculate_alignment_score(title, description)
         
         # Dynamic title score formula
         title_score = 20 * (
-            0.35 * title_word_count_score +
-            0.35 * technical_keyword_ratio +
+            0.30 * title_word_count_score +
+            0.40 * tech_keyword_score +
             0.20 * alignment_score -
             0.10 * duplicate_penalty
         )
@@ -46,13 +55,13 @@ class TitleAnalyzer:
             'title_score': round(title_score, 1),
             'metrics': {
                 'title_word_count': word_count,
-                'technical_keyword_ratio': round(technical_keyword_ratio, 3),
+                'technical_keyword_ratio': round(len(technical_keywords_found) / max(word_count, 1), 3),
                 'duplicate_word_ratio': round(duplicate_penalty, 3),
                 'alignment_score': round(alignment_score, 3),
                 'title_word_count_score': round(title_word_count_score, 3)
             },
             'signals': {
-                'technical_terms_found': self._get_technical_terms(words),
+                'technical_terms_found': technical_keywords_found,
                 'duplicate_words': self._get_duplicate_words(words),
                 'shared_keywords': self._get_shared_keywords(title, description)
             }

@@ -74,7 +74,10 @@ class RepositoryAnalyzer:
         pattern = r'github\.com/([^/]+)/([^/]+)'
         match = re.search(pattern, url)
         if match:
-            return match.group(1), match.group(2).rstrip('.git').rstrip('/')
+            repo = match.group(2)
+            if repo.endswith('.git'):
+                repo = repo[:-4]
+            return match.group(1), repo.rstrip('/')
         return None, None
 
     def _get_repo_info(self, owner: str, repo: str) -> Dict:
@@ -143,7 +146,7 @@ class RepositoryAnalyzer:
         paths = [f['path'].lower() for f in files]
         
         # README analysis
-        readme_path = next((f['path'] for f in files if f['name'].lower().startswith('readme.md')), None)
+        readme_path = next((f['path'] for f in files if f['path'].lower().split('/')[-1].startswith('readme.md')), None)
         readme_score = 0
         if readme_path:
             readme_score = 1  # Base score for exists

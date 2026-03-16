@@ -6,6 +6,9 @@ from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+import logging
+
+logger = logging.getLogger("lifecycle")
 
 from ..services.product_orchestrator import ProductOrchestrator
 from ..services.review_engine import ReviewEngine
@@ -67,6 +70,10 @@ class ReviewDetailResponse(BaseModel):
     documentation_score: float
     documentation_alignment: str
     analysis_pdf: Optional[dict] = None
+    title_score: float = 0.0
+    description_score: float = 0.0
+    repository_score: float = 0.0
+    registry_validation: Optional[dict] = None
 
 class NextTaskDetailResponse(BaseModel):
     next_task_id: str
@@ -89,6 +96,8 @@ async def submit_task(
     task_description: str = Form(...),
     submitted_by: str = Form(...),
     github_repo_link: str = Form(...),
+    module_id: str = Form(default="task-review-agent"),
+    schema_version: str = Form(default="v1.0"),
     previous_task_id: Optional[str] = Form(None),
     pdf_file: Optional[UploadFile] = File(None)
 ):
@@ -111,6 +120,8 @@ async def submit_task(
             task_description=task_description,
             submitted_by=submitted_by,
             github_repo_link=github_repo_link,
+            module_id=module_id,
+            schema_version=schema_version,
             timestamp=datetime.now(),
             pdf_extracted_text=pdf_text
         )
@@ -180,6 +191,18 @@ def get_review(submission_id: str):
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     
+    submission = product_storage.get_submission(submission_id)
+    registry_validation = None
+    if submission and submission.registry_validation_status:
+        registry_validation = {
+            "module_id": submission.module_id,
+            "schema_version": submission.schema_version,
+            "module_id_valid": submission.registry_validation_status == "VALID",
+            "lifecycle_stage_valid": submission.registry_validation_status == "VALID",
+            "schema_version_valid": submission.registry_validation_status == "VALID",
+            "validation_passed": submission.registry_validation_status == "VALID"
+        }
+
     return ReviewDetailResponse(
         review_id=review.review_id,
         submission_id=review.submission_id,
@@ -199,7 +222,11 @@ def get_review(submission_id: str):
         evaluation_summary=review.evaluation_summary,
         documentation_score=review.documentation_score,
         documentation_alignment=review.documentation_alignment,
-        analysis_pdf=review.analysis_pdf
+        analysis_pdf=review.analysis_pdf,
+        title_score=review.title_score,
+        description_score=review.description_score,
+        repository_score=review.repository_score,
+        registry_validation=registry_validation
     )
 
 @router.get("/next/{submission_id}", response_model=NextTaskDetailResponse)

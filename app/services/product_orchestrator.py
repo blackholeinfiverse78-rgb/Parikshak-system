@@ -143,7 +143,10 @@ class ProductOrchestrator:
             evaluation_summary=review_output.evaluation_summary,
             documentation_score=review_output.documentation_score,
             documentation_alignment=review_output.documentation_alignment,
-            analysis_pdf=review_output.analysis_pdf
+            analysis_pdf=review_output.analysis_pdf,
+            title_score=review_output.title_score,
+            description_score=review_output.description_score,
+            repository_score=review_output.repository_score
         )
         product_storage.store_review(review_record)
         logger.info(f"Stored detailed review: {review_id}")
@@ -171,8 +174,8 @@ class ProductOrchestrator:
         product_storage.store_next_task(next_task_record)
         
         # Update submission status
-        submission.status = TaskStatus.REVIEWED
-        
+        submission.status = TaskStatus.SUBMITTED
+
         # Step 8: Return structured response
         return {
             "submission_id": submission_id,
@@ -192,6 +195,12 @@ class ProductOrchestrator:
                 "status": "VALID",
                 "module_id": task.module_id,
                 "schema_version": task.schema_version
+            },
+            "lifecycle": {
+                "current_status": "submitted",
+                "previous_task_id": previous_task_id,
+                "review_id": review_id,
+                "next_task_id": next_task_id
             }
         }
     

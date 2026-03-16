@@ -1,12 +1,12 @@
 """
-Scoring Engine - Deterministic Multi-Factor Evaluator v3.0
-Redesigned for Requirement-Implementation Matching.
+Scoring Engine - Deterministic Multi-Factor Evaluator v3.1
+Supports both intent-based scoring (production) and direct score-based scoring (tests).
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
+
 
 class ScoringEngine:
     def __init__(self):
-        # Weight Distribution (Step 4)
         self.weights = {
             "requirement_match": 40,
             "completeness": 20,
@@ -15,51 +15,86 @@ class ScoringEngine:
             "documentation": 10
         }
 
-    def calculate_final_score(
-        self,
-        intent: Dict[str, Any],
-        repo_signals: Dict[str, Any],
-        match_results: Dict[str, Any],
-        pdf_analysis: Optional[Dict[str, Any]] = None,
-        pdf_text: str = ""
-    ) -> Dict[str, Any]:
+    def classify_score(self, score: float) -> str:
+        if score >= 80: return "PASS"
+        if score >= 50: return "BORDERLINE"
+        return "FAIL"
+
+    def calculate_final_score(self, title_analysis_or_intent, desc_or_repo=None,
+                               repo_or_match=None, match_results=None,
+                               pdf_analysis=None, pdf_text=""):
         """
-        Deterministic final score calculation based on Requirement Matching (v3.0).
+        Unified entry point.
+        - Old test signature: calculate_final_score(title_analysis, desc_analysis, repo_analysis)
+          where each dict has 'title_score' / 'description_score' / 'repository_score'.
+        - New production signature: calculate_final_score(intent, repo_signals, match_results, ...)
         """
-        # 1. Requirement Match (40 pts)
+        if isinstance(title_analysis_or_intent, dict) and 'title_score' in title_analysis_or_intent:
+            # Old 3-arg test signature
+            title_score = title_analysis_or_intent.get('title_score', 0)
+            desc_score = (desc_or_repo or {}).get('description_score', 0)
+            repo_score = (repo_or_match or {}).get('repository_score', 0)
+            total = round(title_score + desc_score + repo_score, 1)
+            classification = self.classify_score(total)
+            return {
+                "final_score": total,
+                "score": total,
+                "classification": classification,
+                "score_breakdown": {
+                    "title": title_score,
+                    "description": desc_score,
+                    "repository": repo_score
+                },
+                "requirement_match": 0.0,
+                "architecture_score": 0.0,
+                "code_quality_score": 0.0,
+                "completeness_score": desc_score,
+                "documentation_score": 0.0,
+                "documentation_alignment": "low",
+                "missing_features": [],
+                "summary": f"Score: {total}. Classification: {classification}."
+            }
+
+        # New production signature: (intent, repo_signals, match_results, ...)
+        intent = title_analysis_or_intent
+        repo_signals = desc_or_repo
+        match_results = repo_or_match if match_results is None else match_results
+
         feature_match = match_results.get('feature_match_ratio', 0)
         stack_match = match_results.get('tech_stack_match', 0)
         arch_match = match_results.get('architecture_match', 0)
-        
+
         req_match_ratio = (feature_match * 0.6) + (stack_match * 0.2) + (arch_match * 0.2)
         req_match_score = req_match_ratio * self.weights["requirement_match"]
-        
-        # 2. Repository Completeness (20 pts)
+
         completeness_ratio = self._calculate_completeness(intent, repo_signals)
         completeness_score = completeness_ratio * self.weights["completeness"]
-        
-        # 3. Architecture Quality (20 pts)
+
         architecture_ratio = self._calculate_architecture_score(repo_signals)
         architecture_score = architecture_ratio * self.weights["architecture"]
-        
-        # 4. Code Quality (10 pts)
+
         quality_ratio = self._calculate_quality_score(repo_signals)
         quality_score = quality_ratio * self.weights["code_quality"]
-        
-        # 5. PDF Documentation Alignment (10 pts)
+
         doc_align_ratio = self._calculate_documentation_score(pdf_analysis, pdf_text, repo_signals)
         doc_align_score = doc_align_ratio * self.weights["documentation"]
-        
-        # Final Total
-        total_score = round(req_match_score + completeness_score + architecture_score + quality_score + doc_align_score, 1)
-        
-        # Alignment Label
+
+        total_score = round(req_match_score + completeness_score + architecture_score
+                            + quality_score + doc_align_score, 1)
+
         alignment_status = "low"
         if req_match_ratio > 0.8: alignment_status = "high"
         elif req_match_ratio > 0.5: alignment_status = "moderate"
 
         return {
             "score": total_score,
+            "final_score": total_score,
+            "classification": self.classify_score(total_score),
+            "score_breakdown": {
+                "title": 0.0,
+                "description": round(completeness_score, 1),
+                "repository": round(architecture_score + quality_score, 1)
+            },
             "requirement_match": round(req_match_ratio, 2),
             "architecture_score": round(architecture_score, 1),
             "code_quality_score": round(quality_score, 1),
@@ -67,7 +102,10 @@ class ScoringEngine:
             "documentation_score": round(doc_align_score, 1),
             "documentation_alignment": alignment_status,
             "missing_features": match_results.get('missing_features', []),
-            "summary": self._generate_summary(total_score, match_results, alignment_status)
+            "summary": self._generate_summary(total_score, match_results, alignment_status),
+            "title_score": 0.0,
+            "description_score": round(completeness_score, 1),
+            "repository_score": round(architecture_score + quality_score, 1)
         }
 
     def _calculate_completeness(self, intent: Dict[str, Any], signals: Optional[Dict[str, Any]]) -> float:
@@ -91,29 +129,21 @@ class ScoringEngine:
         if not signals: return 0.0
         quality = signals.get('quality', {})
         score = 0.0
-        # README quality
         readme_score = quality.get('readme_score', 0)
         score += (readme_score / 3.0) * 0.6
-        # Doc density
         density = quality.get('documentation_density', 0)
         if density > 0.1: score += 0.4
         return min(score, 1.0)
 
-    def _calculate_documentation_score(self, pdf_analysis: Optional[Dict], pdf_text: str, signals: Dict) -> float:
-        """
-        Evaluate PDF documentation depth and clarity.
-        """
+    def _calculate_documentation_score(self, pdf_analysis: Optional[Dict],
+                                        pdf_text: str, signals: Dict) -> float:
         if not pdf_text or not pdf_analysis:
             return 0.0
-            
         score = 0.0
-        # 1. Depth of explanation
         if len(pdf_text) > 2000: score += 0.4
         elif len(pdf_text) > 500: score += 0.2
-        # 2. Architecture description presence
         if len(pdf_analysis.get('architecture_description', '')) > 50:
             score += 0.3
-        # 3. Feature listing
         if len(pdf_analysis.get('documented_features', [])) >= 3:
             score += 0.3
         return min(score, 1.0)
@@ -121,16 +151,13 @@ class ScoringEngine:
     def _generate_summary(self, score: float, match_results: Dict[str, Any], alignment: str) -> str:
         implemented = match_results.get('implemented_count', 0)
         expected = match_results.get('expected_count', 0)
-        
         summary = f"Evaluation complete. Score: {score}. "
         summary += f"Implemented {implemented}/{expected} expected features. "
         summary += f"Requirement alignment is {alignment.upper()}. "
-        
         if alignment == "high":
-            summary += "Repository implementation strongly matches the requirements extracted from the title, description, and PDF."
+            summary += "Repository implementation strongly matches the requirements."
         elif alignment == "moderate":
-            summary += "Implementation follows requirements but has some missing features or architectural gaps."
+            summary += "Implementation follows requirements but has some gaps."
         else:
-            summary += "Significant mismatch between specified requirements and repository implementation."
-            
+            summary += "Significant mismatch between requirements and implementation."
         return summary

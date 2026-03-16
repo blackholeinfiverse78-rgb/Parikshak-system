@@ -40,6 +40,10 @@ class TaskSubmission(BaseModel):
     previous_task_id: Optional[str] = Field(None, description="Reference to previous task in lifecycle")
     pdf_file_path: Optional[str] = Field(None, description="Path to uploaded PDF file")
     pdf_extracted_text: Optional[str] = Field(None, description="Extracted text from PDF")
+    module_id: Optional[str] = Field(None)
+    schema_version: Optional[str] = Field(None)
+    registry_validation_status: Optional[str] = Field(None)
+    registry_validation_reason: Optional[str] = Field(None)
     
     class Config:
         use_enum_values = True
@@ -70,6 +74,9 @@ class ReviewRecord(BaseModel):
     documentation_score: float = Field(default=0.0)
     documentation_alignment: str = Field(default="unknown")
     analysis_pdf: Optional[Dict[str, Any]] = Field(default=None)
+    title_score: float = Field(default=0.0)
+    description_score: float = Field(default=0.0)
+    repository_score: float = Field(default=0.0)
     
     class Config:
         use_enum_values = True
