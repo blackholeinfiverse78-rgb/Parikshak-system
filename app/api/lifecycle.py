@@ -229,16 +229,13 @@ def get_review(submission_id: str):
         registry_validation=registry_validation
     )
 
-@router.get("/next/{next_task_id}", response_model=NextTaskDetailResponse)
-def get_next_task(next_task_id: str):
+@router.get("/next/{submission_id}", response_model=NextTaskDetailResponse)
+def get_next_task(submission_id: str):
     """
-    Get next task by next_task_id (direct) or submission_id (fallback).
+    Get stored next task by submission ID.
+    Stable contract: Always returns complete next task details.
     """
-    # Try direct lookup by next_task_id first
-    next_task = product_storage.get_next_task(next_task_id)
-    # Fallback: treat param as submission_id
-    if not next_task:
-        next_task = product_storage.get_next_task_by_submission(next_task_id)
+    next_task = product_storage.get_next_task_by_submission(submission_id)
     
     if not next_task:
         raise HTTPException(status_code=404, detail="Next task not found")
