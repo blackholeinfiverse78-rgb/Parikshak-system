@@ -5,6 +5,7 @@ from ..models.orchestration import OrchestrationResult, V2NextTask
 from ..models.task_templates import SYSTEM_FALLBACK_TASK
 from .pdf_processor import PDFProcessor
 from .repo_analyzer import RepoAnalyzer
+from .hybrid_evaluation_pipeline import HybridEvaluationPipeline
 import logging
 import uuid
 from datetime import datetime
@@ -24,6 +25,8 @@ class ReviewOrchestrator:
         # Using service classes directly as they are static/stateless
         self._pdf_processor = PDFProcessor
         self._repo_analyzer = RepoAnalyzer
+        # NEW: Hybrid evaluation pipeline for convergence
+        self._hybrid_pipeline = HybridEvaluationPipeline()
 
     @staticmethod
     def classify_readiness(score: int) -> str:
@@ -45,19 +48,35 @@ class ReviewOrchestrator:
         description: str,
         github_url: str = None,
         pdf_file: UploadFile = None,
-        submitted_by: str = "Anonymous"
+        submitted_by: str = "Anonymous",
+        module_id: str = "task-review-agent",
+        schema_version: str = "v1.0"
     ) -> OrchestrationResult:
         """
-        Full end-to-end orchestration flow:
-        1. Validate Inputs
-        2. Extract PDF (Reject if fails)
-        3. Analyze Repo (Fallback if fails)
-        4. Score (via ReviewEngine)
-        5. Classify & Generate Next Task
+        Full end-to-end orchestration flow with STRICT registry validation:
+        1. STRICT Registry Validation (BLOCKING)
+        2. Validate Inputs
+        3. Extract PDF (Reject if fails)
+        4. Analyze Repo (Fallback if fails)
+        5. Score (via Hybrid Pipeline)
+        6. Generate Next Task
         """
-        logger.info(f"Starting extended orchestration. GitHub: {github_url}, PDF: {pdf_file.filename if pdf_file else 'None'}")
+        logger.info(f"Starting orchestration with STRICT registry validation. Module: {module_id}, Schema: {schema_version}")
         
-        # 1. Input Validation
+        # 1. STRICT Registry Validation (BLOCKING) - REJECT BEFORE EVALUATION
+        from .registry_validator import registry_validator
+        
+        registry_validation = registry_validator.validate_complete(module_id, schema_version)
+        if registry_validation.status.value != "VALID":
+            logger.error(f"STRICT Registry Validation FAILED: {registry_validation.reason}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Registry validation failed: {registry_validation.reason}"
+            )
+        
+        logger.info(f"Registry validation PASSED for module {module_id}")
+        
+        # 2. Input Validation
         try:
             from ..models.schemas import ExtendedReviewRequest
             # If github_url or description is provided, validate them
@@ -127,37 +146,95 @@ class ReviewOrchestrator:
         Core logic for evaluating a task and generating the next step.
         """
         try:
-            # 1. Call ReviewEngine
-            review_result_dict = self._review_engine.evaluate(task.model_dump())
-            review_output = ReviewOutput(**review_result_dict)
-            logger.info(f"Review Logic Result: Score={review_output.score}, Status={review_output.status}")
-        except Exception as e:
-            logger.error(f"ReviewEngine failed: {str(e)}", exc_info=True)
-            review_output = ReviewOutput(
-                score=0,
-                readiness_percent=0,
-                status="fail",
-                failure_reasons=["Review process error."],
-                analysis=Analysis(technical_quality=0, clarity=0, discipline_signals=0),
-                meta=Meta(evaluation_time_ms=0, mode="rule")
+            # 1. Call Hybrid Evaluation Pipeline (CONVERGENCE)
+            logger.info("Using Hybrid Evaluation Pipeline for final convergence")
+            
+            # Extract PDF text if present
+            pdf_text = getattr(task, 'pdf_extracted_text', '') or ''
+            if not pdf_text and "--- Extracted PDF Content ---" in task.task_description:
+                try:
+                    pdf_text = task.task_description.split("--- Extracted PDF Content ---")[1].strip()
+                except:
+                    pass
+            
+            # Extract GitHub URL if present
+            github_url = getattr(task, 'github_repo_link', None)
+            if not github_url and "--- GitHub Repository Metrics ---" in task.task_description:
+                try:
+                    marker = "--- GitHub Repository Metrics ---"
+                    parts = task.task_description.split(marker)
+                    content = parts[1].strip()
+                    if "---" in content:
+                        content = content.split("---")[0].strip()
+                    metrics = json.loads(content)
+                    github_url = metrics.get('url')
+                except Exception as e:
+                    logger.warning(f"Failed to extract GitHub URL: {e}")
+            
+            # Clean description for evaluation
+            clean_description = task.task_description
+            if "--- GitHub Repository Metrics ---" in clean_description:
+                clean_description = clean_description.split("--- GitHub Repository Metrics ---")[0].strip()
+            if "--- Extracted PDF Content ---" in clean_description:
+                clean_description = clean_description.split("--- Extracted PDF Content ---")[0].strip()
+            
+            # Call hybrid pipeline
+            hybrid_result = self._hybrid_pipeline.evaluate(
+                task_title=task.task_title,
+                task_description=clean_description,
+                repository_url=github_url,
+                pdf_text=pdf_text
             )
+            
+            # Convert to ReviewOutput
+            review_output = ReviewOutput(**hybrid_result)
+            
+            # Extract next task if present
+            if "next_task" in hybrid_result and hybrid_result["next_task"]:
+                next_task_data = hybrid_result["next_task"]
+                review_output.next_task = V2NextTask(**next_task_data)
+            
+            logger.info(f"Hybrid Pipeline Result: Score={review_output.score}, Status={review_output.status}")
+            
+        except Exception as e:
+            logger.error(f"Hybrid Pipeline failed: {str(e)}", exc_info=True)
+            # Fallback to old review engine
+            try:
+                logger.warning("Falling back to legacy review engine")
+                review_result_dict = self._review_engine.evaluate(task.model_dump())
+                review_output = ReviewOutput(**review_result_dict)
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {str(fallback_error)}")
+                review_output = ReviewOutput(
+                    score=0,
+                    readiness_percent=0,
+                    status="fail",
+                    failure_reasons=["Evaluation system error."],
+                    analysis=Analysis(technical_quality=0, clarity=0, discipline_signals=0),
+                    meta=Meta(evaluation_time_ms=0, mode="rule")
+                )
 
-        # 2. Interpret readiness
-        classification = self.classify_readiness(review_output.score)
+        # 2. Interpret readiness (hybrid pipeline already provides correct status)
+        classification = review_output.status.upper()
         logger.info(f"Readiness Classification: {classification}")
 
-        # 3. Next Task Generation
-        try:
-            next_task = self._next_task_generator.generate_next_task(review_output, classification)
-            logger.info(f"Next Task Generated: Title='{next_task.title}', Difficulty='{next_task.difficulty}'")
-        except Exception as e:
-            logger.warning(f"NextTaskGenerator failed: {str(e)} - Using system fallback")
-            next_task = V2NextTask(
-                title=SYSTEM_FALLBACK_TASK.title,
-                objective=SYSTEM_FALLBACK_TASK.objective,
-                focus_area=SYSTEM_FALLBACK_TASK.focus_area,
-                difficulty=SYSTEM_FALLBACK_TASK.difficulty
-            )
+        # 3. Next Task Generation (check if already provided by hybrid pipeline)
+        if hasattr(review_output, 'next_task') and review_output.next_task:
+            next_task = review_output.next_task
+            logger.info(f"Next Task from Hybrid Pipeline: Title='{next_task.title}', Difficulty='{next_task.difficulty}'")
+        else:
+            # Fallback to legacy next task generator
+            try:
+                next_task = self._next_task_generator.generate_next_task(review_output, classification)
+                logger.info(f"Next Task from Legacy Generator: Title='{next_task.title}', Difficulty='{next_task.difficulty}'")
+            except Exception as e:
+                logger.warning(f"NextTaskGenerator failed: {str(e)} - Using system fallback")
+                next_task = V2NextTask(
+                    title=SYSTEM_FALLBACK_TASK.title,
+                    objective=SYSTEM_FALLBACK_TASK.objective,
+                    focus_area=SYSTEM_FALLBACK_TASK.focus_area,
+                    difficulty=SYSTEM_FALLBACK_TASK.difficulty
+                )
 
         review_output.next_task = next_task
 
