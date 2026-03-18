@@ -11,9 +11,12 @@ const SubmitTask = () => {
     const mutation = useMutation({
         mutationFn: taskService.submitTask,
         onSuccess: (data) => {
-            // Lifecycle API returns submission_id
             const taskId = data.submission_id;
             if (taskId) {
+                // Store next_task_id so ReviewResultCard can navigate directly
+                if (data.next_task_summary?.task_id) {
+                    sessionStorage.setItem(`next_task_${taskId}`, data.next_task_summary.task_id);
+                }
                 navigate(`/review/${taskId}`);
             }
         },

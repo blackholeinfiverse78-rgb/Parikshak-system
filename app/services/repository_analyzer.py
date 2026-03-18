@@ -3,26 +3,48 @@ Repository Analyzer - Deterministic Evaluation Module
 Extracts measurable signals from GitHub repositories for architecture and quality analysis.
 """
 import requests
+import subprocess
+import json as _json
 import re
 import base64
 from typing import Dict, Any, Optional, List
 import logging
+import os
+from dotenv import load_dotenv
 
 logger = logging.getLogger("repository_analyzer")
+
+load_dotenv()
+
+def _curl_get(url: str, headers: dict, timeout: int = 15) -> Optional[dict]:
+    """Fallback HTTP GET using curl.exe (uses WinINet DNS, bypasses broken system DNS)."""
+    try:
+        args = ["curl.exe", "-s", "--max-time", str(timeout)]
+        for k, v in headers.items():
+            args += ["-H", f"{k}: {v}"]
+        args.append(url)
+        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout + 5)
+        if result.returncode == 0 and result.stdout:
+            return _json.loads(result.stdout)
+    except Exception as e:
+        logger.warning(f"curl fallback failed: {e}")
+    return None
 
 class RepositoryAnalyzer:
     def __init__(self):
         self.github_api_base = "https://api.github.com/repos"
-        import os
-        from dotenv import load_dotenv
-        load_dotenv()
         token = os.getenv("GITHUB_TOKEN")
-        self.headers = {
-            "Accept": "application/vnd.github.v3+json"
-        }
+        self.headers = {"Accept": "application/vnd.github.v3+json"}
         if token:
             self.headers["Authorization"] = f"token {token}"
             logger.info("GitHub Token found and initialized.")
+        http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+        https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+        self.proxies = {}
+        if https_proxy:
+            self.proxies["https"] = https_proxy
+        if http_proxy:
+            self.proxies["http"] = http_proxy
 
     def analyze(self, repository_url: Optional[str]) -> Optional[Dict[str, Any]]:
         """
@@ -80,21 +102,29 @@ class RepositoryAnalyzer:
             return match.group(1), repo.rstrip('/')
         return None, None
 
+    def _get(self, url: str, timeout: int = 10) -> dict:
+        """GET with requests, falling back to curl.exe on failure."""
+        try:
+            resp = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=timeout)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.warning(f"requests failed ({e}), trying curl.exe fallback")
+            data = _curl_get(url, self.headers, timeout)
+            if data is None:
+                raise RuntimeError(f"Both requests and curl failed for {url}")
+            return data
+
     def _get_repo_info(self, owner: str, repo: str) -> Dict:
-        url = f"{self.github_api_base}/{owner}/{repo}"
-        resp = requests.get(url, headers=self.headers, timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        return self._get(f"{self.github_api_base}/{owner}/{repo}")
 
     def _fetch_recursive_tree(self, owner: str, repo: str, branch: str) -> Dict:
-        # Get the latest commit SHA for the branch to use the Tree API
         url = f"{self.github_api_base}/{owner}/{repo}/git/trees/{branch}?recursive=1"
-        resp = requests.get(url, headers=self.headers, timeout=15)
-        # If recursive fails (too large), fallback to basic contents
-        if resp.status_code != 200:
+        try:
+            return self._get(url, timeout=15)
+        except Exception:
             logger.warning("Recursive tree fetch failed, falling back")
             return {"tree": []}
-        return resp.json()
 
     def _analyze_structure(self, files: List[Dict]) -> Dict:
         paths = [f['path'] for f in files]

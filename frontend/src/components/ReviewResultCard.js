@@ -176,7 +176,10 @@ const ReviewResultCard = ({ review, taskId }) => {
 
             <div className="flex justify-center pt-4">
                 <Button
-                    onClick={() => navigate(`/next/${taskId}`)}
+                    onClick={() => {
+                        const nextId = sessionStorage.getItem(`next_task_${taskId}`) || taskId;
+                        navigate(`/next/${nextId}`);
+                    }}
                     className="px-10"
                     size="lg"
                 >
