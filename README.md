@@ -727,15 +727,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 **Support**
-
-- 📧 **Email**: support@taskreviewer.com
-- 💬 **Discord**: [Join our community](https://discord.gg/taskreviewer)
-- 📖 **Documentation**: [Full docs](https://docs.taskreviewer.com)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-
----
-
 <div align="center">
 
 **Built with ❤️ by Ishan Shirode**
