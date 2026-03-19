@@ -738,10 +738,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ by the Live Task Review Agent Team**
-
-[![GitHub stars](https://img.shields.io/github/stars/your-repo/live-task-review-agent?style=social)](https://github.com/your-repo/live-task-review-agent)
-[![GitHub forks](https://img.shields.io/github/forks/your-repo/live-task-review-agent?style=social)](https://github.com/your-repo/live-task-review-agent)
-[![GitHub watchers](https://img.shields.io/github/watchers/your-repo/live-task-review-agent?style=social)](https://github.com/your-repo/live-task-review-agent)
+**Built with ❤️ by Ishan Shirode**
 
 </div>
