@@ -2,6 +2,11 @@
     "name": "task-review-frontend",
     "version": "1.0.0",
     "private": true,
+    "homepage": "https://github.com/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution.git"
+    },
     "dependencies": {
         "@tanstack/react-query": "^5.90.21",
         "axios": "^1.6.0",
