@@ -775,7 +775,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ by the Live Task Review Agent Team**
+**Built with ❤️ by Ishan Shirode**
 
 [![GitHub stars](https://img.shields.io/github/stars/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution?style=social)](https://github.com/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution)
 [![GitHub forks](https://img.shields.io/github/forks/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution?style=social)](https://github.com/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution)
