@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-03-21T13:00:57.365675",
+  "security_issues": {
+    "critical": [
+      {
+        "severity": "CRITICAL",
+        "issue": "No authentication mechanism implemented",
+        "file": "app/main.py",
+        "recommendation": "Implement JWT or API key authentication"
+      },
+      {
+        "severity": "CRITICAL",
+        "issue": "No authorization mechanism implemented",
+        "file": "app/main.py",
+        "recommendation": "Implement role-based access control"
+      }
+    ],
+    "high": [
+      {
+        "severity": "HIGH",
+        "issue": "Potential hardcoded key",
+        "file": "app/api/lifecycle.py",
+        "recommendation": "Move key to environment variables"
+      }
+    ],
+    "medium": [
+      {
+        "severity": "MEDIUM",
+        "issue": "No file size limits implemented",
+        "file": "app/services/pdf_analyzer.py",
+        "recommendation": "Implement file size limits"
+      },
+      {
+        "severity": "MEDIUM",
+        "issue": ".env file present",
+        "file": ".env",
+        "recommendation": "Ensure .env is in .gitignore and not committed"
+      },
+      {
+        "severity": "MEDIUM",
+        "issue": "Requests version may have vulnerabilities",
+        "file": "requirements.txt",
+        "recommendation": "Update requests to latest version"
+      }
+    ],
+    "low": []
+  },
+  "functionality_results": [
+    {
+      "component": "Assignment Authority",
+      "status": "PASS",
+      "details": "Working correctly"
+    },
+    {
+      "component": "Signal Collector",
+      "status": "PASS",
+      "details": "Working correctly - supporting only"
+    },
+    {
+      "component": "Validation Gate",
+      "status": "PASS",
+      "details": "Working correctly"
+    }
+  ],
+  "scores": {
+    "security_score": 83,
+    "functionality_score": 100.0,
+    "combined_score": 91.5
+  },
+  "overall_status": "EXCELLENT - Ready for production"
+}

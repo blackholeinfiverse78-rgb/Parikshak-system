@@ -86,8 +86,8 @@ class NextTaskDetailResponse(BaseModel):
     reason: str
     assigned_at: datetime
 
-# Initialize orchestrator
-orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+# Initialize FINAL CONVERGENCE orchestrator
+orchestrator = ProductOrchestrator()  # No legacy review engine needed
 pdf_analyzer = PDFAnalyzer()
 
 @router.post("/submit", response_model=TaskSubmitResponse)
