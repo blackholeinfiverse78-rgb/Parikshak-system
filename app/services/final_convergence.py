@@ -11,7 +11,11 @@ from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
 
-from .assignment_authority import assignment_authority
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main'))
+
+from engine.canonical_intelligence_engine import canonical_intelligence
 from .shraddha_validation import validation_gate
 from .signal_collector import signal_collector
 from .registry_validator import registry_validator, ValidationStatus
@@ -101,9 +105,9 @@ class FinalConvergenceOrchestrator:
             pdf_text=pdf_text
         )
         
-        # STEP 3: Assignment Authority Evaluation (PRIMARY DECISION MAKER)
-        logger.info("[FINAL CONVERGENCE] Step 3: Assignment Authority Evaluation (PRIMARY)")
-        assignment_result = assignment_authority.evaluate_assignment_readiness(
+        # STEP 3: Canonical Intelligence Evaluation (SINGLE AUTHORITY)
+        logger.info("[FINAL CONVERGENCE] Step 3: Canonical Intelligence Evaluation (SINGLE AUTHORITY)")
+        canonical_result = canonical_intelligence.evaluate_and_assign(
             task_title=task_title,
             task_description=task_description,
             supporting_signals=supporting_signals
@@ -112,13 +116,13 @@ class FinalConvergenceOrchestrator:
         # STEP 4: Validation Gate (FINAL WRAPPER)
         logger.info("[FINAL CONVERGENCE] Step 4: Validation Gate (Final Wrapper)")
         
-        # Convert assignment result to API format
-        api_format_result = self._convert_assignment_to_api_format(
-            assignment_result, supporting_signals
+        # Convert canonical result to API format
+        api_format_result = self._convert_canonical_to_api_format(
+            canonical_result, supporting_signals
         )
         
         final_result = validation_gate.validate_final_output(
-            api_format_result, "assignment_authority"
+            api_format_result, "canonical_intelligence"
         )
         
         # STEP 5: Add Convergence Metadata
@@ -127,25 +131,30 @@ class FinalConvergenceOrchestrator:
         logger.info(f"[FINAL CONVERGENCE] Convergence complete - Final Status: {converged_result.get('status')}")
         return converged_result
     
-    def _convert_assignment_to_api_format(
+    def _convert_canonical_to_api_format(
         self, 
-        assignment_result: Dict[str, Any], 
+        canonical_result: Dict[str, Any], 
         supporting_signals: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Convert Assignment Authority result to API format
+        Convert Canonical Intelligence result to API format
         
         Args:
-            assignment_result: Result from Assignment Authority
+            canonical_result: Result from Canonical Intelligence Engine
             supporting_signals: Supporting signals for reference
             
         Returns:
             API-formatted result
         """
-        # Extract assignment data
-        score = assignment_result.get("score", 0)
-        status = assignment_result.get("status", "fail")
-        next_assignment = assignment_result.get("next_assignment", {})
+        # Extract canonical data
+        score = canonical_result.get("score", 0)
+        status = canonical_result.get("status", "fail")
+        next_task_data = {
+            "assignment_type": canonical_result.get("task_type", "correction"),
+            "difficulty": canonical_result.get("difficulty", "foundational"),
+            "focus_area": canonical_result.get("focus_area", "general"),
+            "reason": canonical_result.get("reason", "Canonical intelligence decision")
+        }
         
         # Generate IDs
         submission_id = f"sub-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -156,26 +165,26 @@ class FinalConvergenceOrchestrator:
             "submission_id": submission_id,
             "score": score,
             "status": status,
-            "readiness_percent": assignment_result.get("readiness_percent", score),
+            "readiness_percent": canonical_result.get("readiness_percent", score),
             "next_task_id": next_task_id,
-            "task_type": next_assignment.get("assignment_type", "correction"),
-            "title": self._generate_assignment_title(next_assignment),
-            "difficulty": next_assignment.get("difficulty", "beginner"),
-            "objective": next_assignment.get("reason", "Complete assignment"),
-            "focus_area": next_assignment.get("focus_area", "general"),
-            "reason": next_assignment.get("reason", "Assignment determined by authority"),
+            "task_type": canonical_result.get("task_type", "correction"),
+            "title": canonical_result.get("title", "Task Assignment"),
+            "difficulty": canonical_result.get("difficulty", "foundational"),
+            "objective": canonical_result.get("objective", "Complete assignment"),
+            "focus_area": canonical_result.get("focus_area", "general"),
+            "reason": canonical_result.get("reason", "Canonical intelligence decision"),
             
             # Evidence and metadata
             "missing_features": supporting_signals.get("missing_features", []),
             "failure_reasons": [str(f) for f in supporting_signals.get("failure_indicators", [])],
             "expected_vs_delivered": supporting_signals.get("expected_vs_delivered_evidence", {}),
-            "evaluation_summary": f"Assignment Authority Evaluation: {status} (Score: {score})",
-            "improvement_hints": self._generate_improvement_hints(assignment_result, supporting_signals),
+            "evaluation_summary": f"Canonical Intelligence Evaluation: {status} (Score: {score})",
+            "improvement_hints": self._generate_improvement_hints(canonical_result, supporting_signals),
             
             # Authority metadata
-            "authority_override": assignment_result.get("authority_override", True),
-            "evaluation_basis": assignment_result.get("evaluation_basis", "assignment_authority"),
-            "evidence_summary": assignment_result.get("evidence_summary", {}),
+            "canonical_authority": canonical_result.get("canonical_authority", True),
+            "evaluation_basis": canonical_result.get("evaluation_basis", "canonical_intelligence"),
+            "evidence_summary": canonical_result.get("evidence_summary", {}),
             
             # Supporting signals reference
             "supporting_signals": supporting_signals
@@ -185,15 +194,15 @@ class FinalConvergenceOrchestrator:
     
     def _generate_improvement_hints(
         self, 
-        assignment_result: Dict[str, Any], 
+        canonical_result: Dict[str, Any], 
         supporting_signals: Dict[str, Any]
     ) -> list:
         """
-        Generate improvement hints based on assignment evaluation
+        Generate improvement hints based on canonical evaluation
         """
         hints = []
         
-        evidence = assignment_result.get("evidence_summary", {})
+        evidence = canonical_result.get("evidence_summary", {})
         missing_count = evidence.get("missing_features_count", 0)
         delivery_ratio = evidence.get("delivery_ratio", 0.0)
         
@@ -235,7 +244,7 @@ class FinalConvergenceOrchestrator:
         converged_result["convergence_metadata"] = {
             "orchestrator": "final_convergence",
             "hierarchy_enforced": True,
-            "assignment_authority": "PRIMARY",
+            "canonical_intelligence": "SINGLE_AUTHORITY",
             "signal_evaluation": "SUPPORTING",
             "validation_layer": "FINAL_WRAPPER",
             "convergence_timestamp": datetime.now().isoformat(),

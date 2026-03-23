@@ -117,7 +117,7 @@ class ProductOrchestrator:
                     clarity=convergence_result.get("supporting_signals", {}).get("technical_signals", {}).get("description_score", 0),
                     discipline_signals=convergence_result.get("supporting_signals", {}).get("technical_signals", {}).get("repository_score", 0)
                 ),
-                meta=Meta(evaluation_time_ms=100, mode="final_convergence")
+                meta=Meta(evaluation_time_ms=100, mode="hybrid")
             )
         except Exception as e:
             logger.error(f"[FINAL CONVERGENCE] Result conversion failed: {e}")
@@ -129,7 +129,7 @@ class ProductOrchestrator:
                 failure_reasons=["Convergence processing error"],
                 improvement_hints=[],
                 analysis=Analysis(technical_quality=0, clarity=0, discipline_signals=0),
-                meta=Meta(evaluation_time_ms=0, mode="error")
+                meta=Meta(evaluation_time_ms=0, mode="hybrid")
             )
         
         # Store review record with FINAL CONVERGENCE data
