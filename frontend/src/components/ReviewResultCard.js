@@ -17,7 +17,7 @@ const ReviewResultCard = ({ review, taskId }) => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 fade-in">
             {/* Registry Validation Card */}
             <RegistryValidationCard validation={review?.registry_validation} />
 
@@ -35,7 +35,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                     </div>
 
                     <div className="w-full space-y-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400">
+                        <div className="flex justify-between text-xs font-black uppercase tracking-tighter text-slate-400">
                             <span>Title Analysis</span>
                             <span className="text-slate-600 dark:text-slate-300">
                                 {review?.title_score != null ? review.title_score.toFixed(1) : (review?.feature_coverage != null ? (review.feature_coverage * 20).toFixed(1) : 0)}/20
@@ -45,7 +45,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                             <div className="h-full bg-blue-500" style={{ width: `${((review?.title_score ?? (review?.feature_coverage ?? 0) * 20) / 20) * 100}%` }} />
                         </div>
 
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400 pt-2">
+                        <div className="flex justify-between text-xs font-black uppercase tracking-tighter text-slate-400 pt-2">
                             <span>Description Analysis</span>
                             <span className="text-slate-600 dark:text-slate-300">
                                 {review?.description_score != null ? review.description_score.toFixed(1) : (review?.completeness_score != null ? review.completeness_score.toFixed(1) : 0)}/40
@@ -55,7 +55,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                             <div className="h-full bg-emerald-500" style={{ width: `${((review?.description_score ?? review?.completeness_score ?? 0) / 40) * 100}%` }} />
                         </div>
 
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400 pt-2">
+                        <div className="flex justify-between text-xs font-black uppercase tracking-tighter text-slate-400 pt-2">
                             <span>Repository Analysis</span>
                             <span className="text-slate-600 dark:text-slate-300">
                                 {review?.repository_score != null ? review.repository_score.toFixed(1) : (review?.architecture_score != null ? review.architecture_score.toFixed(1) : 0)}/40
@@ -67,7 +67,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                     </div>
                 </div>
 
-                {/* Registry Validation & Analysis Results */}
+                {/* Analysis Results */}
                 <div className="md:col-span-2 card bg-gradient-to-br from-white to-slate-50 dark:from-slate-800/50 dark:to-slate-900 border-l-4 border-l-emerald-500">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold mb-4">
                         <AlertCircle size={20} />
@@ -104,7 +104,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                 </div>
             </div>
 
-            {/* Evaluation Summary — with TTS Listen button */}
+            {/* Evaluation Summary */}
             {review?.evaluation_summary && (
                 <div className="card bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between mb-2">
@@ -152,7 +152,7 @@ const ReviewResultCard = ({ review, taskId }) => {
                 />
             )}
 
-            {/* Hints Section — with TTS on each hint */}
+            {/* Hints Section */}
             <div className="card bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold mb-3">
                     <Lightbulb size={20} />
