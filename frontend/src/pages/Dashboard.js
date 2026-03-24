@@ -9,26 +9,49 @@ import Button from '../components/ui/Button';
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { data: history, isLoading } = useQuery({
+    const { data: history, isLoading, error } = useQuery({
         queryKey: ['taskHistory'],
         queryFn: taskService.getTaskHistory,
+        retry: 1,
+        staleTime: 30000
     });
 
-    if (isLoading) return <LoadingState message="Syncing workspace data..." />;
+    if (isLoading) return <LoadingState message="Loading dashboard..." />;
+    
+    if (error) {
+        return (
+            <div className="space-y-10">
+                <header className="text-center">
+                    <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                        Task Review <span className="text-blue-600">Agent</span>
+                    </h1>
+                    <p className="text-slate-500 font-medium mt-2">Enterprise-grade autonomous evaluation system</p>
+                </header>
+                
+                <div className="card text-center py-10">
+                    <p className="text-slate-500 mb-4">Unable to connect to backend. You can still submit tasks.</p>
+                    <Button onClick={() => navigate('/submit')}>
+                        <Plus size={18} />
+                        Submit New Task
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     const recentTasks = history?.slice(0, 3) || [];
     const averageScore = history?.length > 0
-        ? Math.round(history.reduce((acc, task) => acc + (task.review_score || 0), 0) / history.length)
+        ? Math.round(history.reduce((acc, task) => acc + (task.score || 0), 0) / history.length)
         : 0;
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
+        <div className="space-y-10 fade-in">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                        Workspace <span className="text-blue-600">Overview</span>
+                        Task Review <span className="text-blue-600">Agent</span>
                     </h1>
-                    <p className="text-slate-500 font-medium">Manage your autonomous task lifecycle and track progress.</p>
+                    <p className="text-slate-500 font-medium">Enterprise-grade autonomous evaluation system</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button onClick={() => navigate('/history')} variant="secondary">
@@ -66,8 +89,8 @@ const Dashboard = () => {
                         <History size={32} />
                     </div>
                     <div>
-                        <div className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Last Sync</div>
-                        <div className="text-lg font-black uppercase text-indigo-600">Just Now</div>
+                        <div className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Status</div>
+                        <div className="text-lg font-black uppercase text-indigo-600">Ready</div>
                     </div>
                 </div>
             </section>
@@ -91,19 +114,19 @@ const Dashboard = () => {
                         {recentTasks.length > 0 ? (
                             recentTasks.map((task) => (
                                 <div
-                                    key={task.id}
-                                    onClick={() => navigate(`/review/${task.id}`)}
+                                    key={task.submission_id}
+                                    onClick={() => navigate(`/review/${task.submission_id}`)}
                                     className="card !p-4 flex items-center justify-between hover:scale-[1.01] transition-all cursor-pointer group"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center font-bold text-blue-600">
-                                            {task.review_score || '—'}
+                                            {task.score || '—'}
                                         </div>
                                         <div>
                                             <div className="font-bold group-hover:text-blue-600 transition-colors uppercase tracking-tight">
                                                 {task.task_title}
                                             </div>
-                                            <div className="text-xs text-slate-500">{new Date(task.submission_date).toLocaleDateString()}</div>
+                                            <div className="text-xs text-slate-500">{new Date(task.submitted_at).toLocaleDateString()}</div>
                                         </div>
                                     </div>
                                     <StatusBadge status={task.status} />
@@ -113,7 +136,7 @@ const Dashboard = () => {
                             <div className="card py-10 text-center border-dashed border-2">
                                 <p className="text-slate-500 font-medium">No tasks found. Start by submitting your first task.</p>
                                 <Button onClick={() => navigate('/submit')} variant="ghost" className="mt-4">
-                                    Go to Submission
+                                    Submit First Task
                                 </Button>
                             </div>
                         )}
@@ -123,16 +146,15 @@ const Dashboard = () => {
                 <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 border-none text-white relative overflow-hidden group shadow-xl shadow-blue-500/20 p-6">
                     <div className="relative z-10 space-y-6">
                         <div className="space-y-2">
-                            <h3 className="text-2xl font-black text-white">Ready to level up?</h3>
+                            <h3 className="text-2xl font-black text-white">Ready to Start?</h3>
                             <p className="text-blue-100 text-sm leading-relaxed">
-                                Submit your project for registry-aware evaluation. Get dynamic scoring across title, description, and repository analysis with Blueprint Registry validation.
+                                Submit your project for registry-aware evaluation. Get dynamic scoring across title, description, and repository analysis.
                             </p>
                         </div>
                         <Button onClick={() => navigate('/submit')} className="w-full bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-none border-none">
                             Start New Evaluation
                         </Button>
                     </div>
-                    {/* Decorative elements */}
                     <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-colors" />
                     <div className="absolute bottom-[-10%] left-[-10%] w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl" />
                 </div>
