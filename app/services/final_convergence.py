@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main'))
 
-from engine.canonical_intelligence_engine import canonical_intelligence as sri_satya_intelligence
+from engine.task_intelligence_engine import sri_satya_intelligence
 from .shraddha_validation import validation_gate
 from .signal_collector import signal_collector
 from .registry_validator import registry_validator, ValidationStatus
@@ -160,7 +160,7 @@ class FinalConvergenceOrchestrator:
         submission_id = f"sub-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         next_task_id = f"next-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Convert to API format
+        # Convert to API format with proper score breakdown
         api_result = {
             "submission_id": submission_id,
             "score": score,
@@ -178,16 +178,26 @@ class FinalConvergenceOrchestrator:
             "missing_features": supporting_signals.get("missing_features", []),
             "failure_reasons": [str(f) for f in supporting_signals.get("failure_indicators", [])],
             "expected_vs_delivered": supporting_signals.get("expected_vs_delivered_evidence", {}),
-            "evaluation_summary": f"Canonical Intelligence Evaluation: {status} (Score: {score})",
+            "evaluation_summary": f"Sri Satya Intelligence Evaluation: {status} (Score: {score})",
             "improvement_hints": self._generate_improvement_hints(canonical_result, supporting_signals),
             
             # Authority metadata
             "canonical_authority": canonical_result.get("canonical_authority", True),
-            "evaluation_basis": canonical_result.get("evaluation_basis", "canonical_intelligence"),
+            "evaluation_basis": canonical_result.get("evaluation_basis", "sri_satya_canonical_intelligence"),
             "evidence_summary": canonical_result.get("evidence_summary", {}),
             
-            # Supporting signals reference
-            "supporting_signals": supporting_signals
+            # CRITICAL: Pass through the component scores from Sri Satya's engine
+            "supporting_signals": {
+                **supporting_signals,
+                "technical_signals": {
+                    "title_score": canonical_result.get("title_score", 0),
+                    "description_score": canonical_result.get("description_score", 0),
+                    "repository_score": canonical_result.get("repository_score", 0)
+                },
+                "implementation_signals": canonical_result.get("supporting_signals", {}).get("implementation_signals", {}),
+                "requirement_match": canonical_result.get("supporting_signals", {}).get("requirement_match", 0.0),
+                "documentation_alignment": canonical_result.get("supporting_signals", {}).get("documentation_alignment", "low")
+            }
         }
         
         return api_result
