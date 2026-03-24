@@ -1,11 +1,11 @@
 """
-Task Review Engine - Adapter for Deterministic Evaluation v5.0 (PDF Support)
-Bridges the upgraded EvaluationEngine with the ReviewOutput schema.
+Task Review Engine - Final Convergence Adapter
+Bridges the final convergence system with the ReviewOutput schema.
 """
 from typing import Optional
 from ..models.schemas import Task, ReviewOutput, Analysis, Meta
 from ..core.interfaces.review_engine_interface import ReviewEngineInterface
-from .evaluation_engine import EvaluationEngine
+from .final_convergence import final_convergence
 from .pdf_analyzer import PDFAnalyzer
 import logging
 import time
@@ -14,7 +14,8 @@ logger = logging.getLogger("review_engine")
 
 class ReviewEngine(ReviewEngineInterface):
     def __init__(self):
-        self.evaluation_engine = EvaluationEngine()
+        # Use final convergence system instead of evaluation engine
+        pass
 
     def evaluate(self, task: dict) -> dict:
         task_obj = Task(**task)
@@ -51,66 +52,85 @@ class ReviewEngine(ReviewEngineInterface):
             except:
                 pass
 
-        # Run evaluation
-        eval_result = self.evaluation_engine.evaluate(
+        # Use final convergence system for evaluation
+        convergence_result = final_convergence.process_with_convergence(
             task_title=task.task_title,
             task_description=clean_description,
             repository_url=task.github_repo_link or github_url,
+            module_id=getattr(task, 'module_id', 'task-review-agent'),
+            schema_version=getattr(task, 'schema_version', 'v1.0'),
             pdf_text=pdf_text
         )
 
-        score = int(eval_result['score'])
+        score = int(convergence_result.get('score', 0))
+        status = convergence_result.get('status', 'fail')
 
-        if score >= 80:
-            status = "pass"
-        elif score >= 50:
-            status = "borderline"
+        # Analysis — extract from convergence result
+        supporting_signals = convergence_result.get('supporting_signals', {})
+        title_signals = supporting_signals.get('title_signals', {})
+        desc_signals = supporting_signals.get('description_signals', {})
+        repo_signals = supporting_signals.get('repository_signals', {})
+
+        # Re-run analyzers to get actual scores for display
+        from .title_analyzer import TitleAnalyzer
+        from .description_analyzer import DescriptionAnalyzer
+        _title_result = TitleAnalyzer().analyze(task.task_title, task.task_description)
+        _desc_result = DescriptionAnalyzer().analyze(task.task_description)
+        title_score_val = _title_result.get('title_score', 0.0)
+        desc_score_val = _desc_result.get('description_score', 0.0)
+
+        # Repository score from repo signals
+        repo_available = supporting_signals.get('repository_available', False)
+        if repo_available and repo_signals:
+            arch = repo_signals.get('architecture', {})
+            quality = repo_signals.get('quality', {})
+            structure = repo_signals.get('structure', {})
+            layer_score = min(arch.get('layer_count', 0) / 5, 1.0)
+            readme_score = min(quality.get('readme_score', 0) / 3, 1.0)
+            file_score = min(structure.get('total_files', 0) / 30, 1.0)
+            repo_score_val = round(40 * (0.4 * layer_score + 0.3 * readme_score + 0.3 * file_score), 1)
         else:
-            status = "fail"
+            repo_score_val = 0.0
 
-        # Analysis — clamp all to 0-100
         analysis = Analysis(
-            technical_quality=min(100, int((eval_result['architecture_score'] / 20) * 100)) if eval_result['architecture_score'] > 0 else 0,
-            clarity=min(100, int((eval_result['completeness_score'] / 40) * 100)) if eval_result['completeness_score'] > 0 else 0,
-            discipline_signals=min(100, int((eval_result['documentation_score'] / 10) * 100)) if eval_result['documentation_score'] > 0 else 0
+            technical_quality=min(100, int(title_score_val)),
+            clarity=min(100, int(desc_score_val)),
+            discipline_signals=min(100, int(repo_score_val))
         )
 
-        # Hints
-        hints = [f"Improve: {f}" for f in eval_result['missing_features']]
-        if score < 75:
-            hints.append("Enhance architectural modularity as per Step 4 requirements.")
-        if score < 65:
-            hints.append("Improve document-to-repo alignment (Check Step 7).")
+        # Extract data from convergence result
+        missing_features = convergence_result.get('missing_features', [])
+        failure_reasons = convergence_result.get('failure_reasons', [])
+        improvement_hints = convergence_result.get('improvement_hints', [])
 
-        # failure_reasons — always non-empty on fail
-        failure_reasons = eval_result['missing_features'][:3]
+        # Ensure failure_reasons is non-empty on fail
         if not failure_reasons and score < 50:
             failure_reasons = ["Insufficient technical content in title and description."]
 
         meta = Meta(
             evaluation_time_ms=int((time.time() - start_time) * 1000),
-            mode="rule"
+            mode="hybrid"  # Final convergence mode
         )
 
         return ReviewOutput(
             score=score,
             readiness_percent=score,
             status=status,
-            failure_reasons=failure_reasons,
-            improvement_hints=hints[:5],
+            failure_reasons=failure_reasons[:3],
+            improvement_hints=improvement_hints[:5],
             analysis=analysis,
             meta=meta,
-            feature_coverage=eval_result.get('requirement_match', 0.0),
-            architecture_score=eval_result['architecture_score'],
-            code_quality_score=eval_result['code_quality_score'],
-            completeness_score=eval_result['completeness_score'],
-            missing_features=eval_result['missing_features'],
-            requirement_match=eval_result.get('requirement_match', 0.0),
-            evaluation_summary=eval_result['summary'],
-            documentation_score=eval_result['documentation_score'],
-            documentation_alignment=eval_result['documentation_alignment'],
-            analysis_pdf=eval_result.get('pdf_analysis'),
-            title_score=eval_result.get('title_score', 0.0),
-            description_score=eval_result.get('description_score', 0.0),
-            repository_score=eval_result.get('repository_score', 0.0)
+            feature_coverage=convergence_result.get('evidence_summary', {}).get('delivery_ratio', 0.0),
+            architecture_score=repo_score_val,
+            code_quality_score=repo_score_val,
+            completeness_score=desc_score_val,
+            missing_features=missing_features,
+            requirement_match=convergence_result.get('evidence_summary', {}).get('delivery_ratio', 0.0),
+            evaluation_summary=convergence_result.get('evaluation_summary', 'Final convergence evaluation complete'),
+            documentation_score=repo_score_val,
+            documentation_alignment=supporting_signals.get('documentation_alignment', 'low'),
+            analysis_pdf=convergence_result.get('pdf_analysis', {}),
+            title_score=title_score_val,
+            description_score=desc_score_val,
+            repository_score=repo_score_val
         )

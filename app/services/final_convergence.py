@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main'))
 
-from engine.canonical_intelligence_engine import canonical_intelligence
+from engine.canonical_intelligence_engine import canonical_intelligence as sri_satya_intelligence
 from .shraddha_validation import validation_gate
 from .signal_collector import signal_collector
 from .registry_validator import registry_validator, ValidationStatus
@@ -105,9 +105,9 @@ class FinalConvergenceOrchestrator:
             pdf_text=pdf_text
         )
         
-        # STEP 3: Canonical Intelligence Evaluation (SINGLE AUTHORITY)
-        logger.info("[FINAL CONVERGENCE] Step 3: Canonical Intelligence Evaluation (SINGLE AUTHORITY)")
-        canonical_result = canonical_intelligence.evaluate_and_assign(
+        # STEP 3: Sri Satya Intelligence Evaluation (SINGLE AUTHORITY)
+        logger.info("[FINAL CONVERGENCE] Step 3: Sri Satya Intelligence Evaluation (SINGLE AUTHORITY)")
+        canonical_result = sri_satya_intelligence.evaluate_and_assign(
             task_title=task_title,
             task_description=task_description,
             supporting_signals=supporting_signals
