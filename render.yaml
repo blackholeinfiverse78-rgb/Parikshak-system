@@ -10,17 +10,8 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.7
       - key: ALLOWED_ORIGINS
-        value: '["*"]'
-
-  # Frontend (React) - Static Site
-  - type: web
-    name: task-review-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: build
-    envVars:
-      - key: NODE_VERSION
-        value: 18.17.1
-      - key: REACT_APP_BACKEND_URL
-        value: https://task-review-backend.onrender.com
+        value: '["https://task-review-agent-frontend.vercel.app"]'
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
