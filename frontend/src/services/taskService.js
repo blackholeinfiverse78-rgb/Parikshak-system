@@ -40,7 +40,7 @@ export const taskService = {
     getTtsStream: (text, lang = 'en', tone = 'neutral') => {
         const params = new URLSearchParams({ text, lang, tone });
         // Use the relative path if proxy is configured, or absolute if needed
-        const baseUrl = process.env.REACT_APP_API_BASE || 'http://localhost:8000/api/v1';
+        const baseUrl = process.env.REACT_APP_API_BASE || 'https://task-review-backend-production.up.railway.app/api/v1';
         return `${baseUrl}/tts/speak?${params.toString()}`;
     },
 };
