@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, List, Zap, Play, Info } from 'lucide-react';
+import { Target, List, Play, Info } from 'lucide-react';
 import Button from './ui/Button';
 
 const NextTaskCard = ({ task }) => {
@@ -14,7 +14,7 @@ const NextTaskCard = ({ task }) => {
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
+        <div className="max-w-3xl mx-auto space-y-8 fade-in">
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Your Next Mission</h2>
                 <p className="text-slate-500">The system has analyzed your progress and assigned a new task.</p>
@@ -48,11 +48,11 @@ const NextTaskCard = ({ task }) => {
 
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Focus Area</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Focus Area</div>
                                 <div className="text-sm font-bold text-blue-600 dark:text-blue-400">{task?.focus_area || 'General Review'}</div>
                             </div>
                             <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assignment Type</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Assignment Type</div>
                                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase">{task?.task_type || 'Training'}</div>
                             </div>
                         </div>
