@@ -1,48 +1,119 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PYTHONPATH
 
 # Environment files — never commit secrets
 .env
+.env.*
+*.env
 .env.local
-.env.*.local
 .env.production
 .env.development
-*.env
+.env.secure
 
-# Python virtual environments
-.venv
+# Virtual environments
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+pyvenv.cfg
 
-# Editors
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
 
-# Test artifacts
-*.mp3
-*.wav
-test_tts.mp3
-
-# Frontend build
+# Frontend
 frontend/node_modules/
 frontend/build/
+frontend/dist/
 frontend/.cache/
 node_modules/
 build/
+dist/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# PDF uploads (user data — not for version control)
-storage/uploads/
-
-# Pytest cache
+# Test artifacts and outputs
+*.mp3
+*.wav
+*.log
 .pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
-# Python bytecode
-*.pyo
-*.pyd
+# User data and uploads
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security and deployment
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
