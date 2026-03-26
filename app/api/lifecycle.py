@@ -38,6 +38,8 @@ class NextTaskSummary(BaseModel):
 
 class TaskSubmitResponse(BaseModel):
     submission_id: str
+    submission_timestamp: str
+    attempt_number: int = 1
     review_summary: ReviewSummary
     next_task_summary: NextTaskSummary
 
@@ -95,7 +97,7 @@ async def submit_task(
     task_title: str = Form(...),
     task_description: str = Form(...),
     submitted_by: str = Form(...),
-    github_repo_link: str = Form(...),
+    github_repo_link: Optional[str] = Form(default=""),
     module_id: str = Form(default="task-review-agent"),
     schema_version: str = Form(default="v1.0"),
     previous_task_id: Optional[str] = Form(None),
@@ -134,9 +136,11 @@ async def submit_task(
             pdf_extracted_text=pdf_text
         )
         
-        # Build response
+        # Build response with traceability
         return TaskSubmitResponse(
             submission_id=result["submission_id"],
+            submission_timestamp=result.get("submission_timestamp", datetime.now().isoformat()),
+            attempt_number=result.get("attempt_number", 1),
             review_summary=ReviewSummary(
                 score=result["review"]["score"],
                 status=result["review"]["status"],

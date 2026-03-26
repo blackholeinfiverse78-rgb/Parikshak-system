@@ -28,61 +28,36 @@ class DescriptionAnalyzer:
         ]
     
     def analyze(self, description: str) -> Dict[str, Any]:
-        """Analyze description and return dynamic metrics"""
+        """Analyze description and return SIGNALS ONLY (no scoring)"""
         words = re.findall(r'\b\w+\b', description.lower())
         sentences = re.split(r'[.!?]+', description)
         
         word_count = len(words)
         sentence_count = len([s for s in sentences if s.strip()])
         
-        # Calculate metrics
-        technical_term_ratio = self._calculate_technical_ratio(words)
-        step_indicator_count = self._count_step_indicators(words, description)
+        # Extract SIGNALS only - NO SCORING
+        technical_terms_found = self._get_technical_terms(words)
+        step_indicators_found = self._get_step_indicators(words)
         code_block_count = self._count_code_blocks(description)
         section_headers = self._count_section_headers(description)
         
-        # depth: markdown descriptions are token-sparse; 150 words is a solid threshold
-        depth_score = min(word_count / 150, 1.0)
-
-        # structure: headers + numbered/bulleted list items, normalised over 8
-        structure_score = min((section_headers + step_indicator_count) / 8, 1.0)
-
-        # technical density: cap ratio at 0.25 (25% tech terms is excellent) -> scale to 1.0
-        technical_density = min(technical_term_ratio / 0.25, 1.0)
-
-        # clarity: markdown-heavy text has many short lines; use a lenient band
-        clarity_score = self._calculate_clarity_score(sentence_count, word_count)
-        
-        # Dynamic description score formula
-        description_score = 40 * (
-            0.30 * depth_score +
-            0.30 * technical_density +
-            0.25 * structure_score +
-            0.15 * clarity_score
-        )
-        
-        # Clamp between 0 and 40
-        description_score = max(0, min(40, description_score))
-        
         return {
-            'description_score': round(description_score, 1),
+            'signals': {
+                'technical_terms_found': technical_terms_found,
+                'step_indicators_found': step_indicators_found,
+                'has_code_blocks': code_block_count > 0,
+                'has_structure': section_headers > 0 or len(step_indicators_found) > 0,
+                'code_block_count': code_block_count,
+                'section_headers': section_headers
+            },
             'metrics': {
                 'word_count': word_count,
                 'sentence_count': sentence_count,
-                'technical_term_ratio': round(technical_term_ratio, 3),
-                'step_indicator_count': step_indicator_count,
-                'code_block_count': code_block_count,
-                'section_headers': section_headers,
-                'depth_score': round(depth_score, 3),
-                'structure_score': round(structure_score, 3),
-                'technical_density': round(technical_density, 3),
-                'clarity_score': round(clarity_score, 3)
-            },
-            'signals': {
-                'technical_terms_found': self._get_technical_terms(words),
-                'step_indicators_found': self._get_step_indicators(words),
-                'has_code_blocks': code_block_count > 0,
-                'has_structure': section_headers > 0 or step_indicator_count > 0
+                'technical_term_ratio': len(technical_terms_found) / max(word_count, 1),
+                'step_indicator_count': len(step_indicators_found),
+                'content_depth': min(word_count / 150, 1.0),
+                'structure_score': min((section_headers + len(step_indicators_found)) / 8, 1.0),
+                'technical_density': min((len(technical_terms_found) / max(word_count, 1)) / 0.25, 1.0)
             }
         }
     

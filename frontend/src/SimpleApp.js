@@ -1,1 +1,23 @@
-import React from 'react';\r\nimport { Plus } from 'lucide-react';\r\n\r\nconst SimpleApp = () => {\r\n    return (\r\n        <div className=\"min-h-screen bg-slate-50 flex items-center justify-center\">\r\n            <div className=\"text-center space-y-4\">\r\n                <h1 className=\"text-4xl font-bold text-slate-900\">\r\n                    Task Review Agent\r\n                </h1>\r\n                <p className=\"text-slate-600\">\r\n                    Enterprise-grade autonomous evaluation system\r\n                </p>\r\n                <button className=\"px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto\">\r\n                    <Plus size={20} />\r\n                    Get Started\r\n                </button>\r\n            </div>\r\n        </div>\r\n    );\r\n};\r\n\r\nexport default SimpleApp;
+import React from 'react';
+import { Plus } from 'lucide-react';
+
+const SimpleApp = () => {
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="text-center space-y-4">
+                <h1 className="text-4xl font-bold text-slate-900">
+                    Task Review Agent
+                </h1>
+                <p className="text-slate-600">
+                    Enterprise-grade autonomous evaluation system
+                </p>
+                <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto">
+                    <Plus size={20} />
+                    Get Started
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default SimpleApp;

@@ -65,33 +65,15 @@ class ReviewEngine(ReviewEngineInterface):
         score = int(convergence_result.get('score', 0))
         status = convergence_result.get('status', 'fail')
 
-        # Analysis — extract from convergence result
+        # Analysis — extract ONLY from Sri Satya's canonical result
+        # NO independent analyzer calls - Sri Satya is SINGLE AUTHORITY
         supporting_signals = convergence_result.get('supporting_signals', {})
-        title_signals = supporting_signals.get('title_signals', {})
-        desc_signals = supporting_signals.get('description_signals', {})
-        repo_signals = supporting_signals.get('repository_signals', {})
-
-        # Re-run analyzers to get actual scores for display
-        from .title_analyzer import TitleAnalyzer
-        from .description_analyzer import DescriptionAnalyzer
-        _title_result = TitleAnalyzer().analyze(task.task_title, task.task_description)
-        _desc_result = DescriptionAnalyzer().analyze(task.task_description)
-        title_score_val = _title_result.get('title_score', 0.0)
-        desc_score_val = _desc_result.get('description_score', 0.0)
-
-        # Repository score from repo signals
-        repo_available = supporting_signals.get('repository_available', False)
-        if repo_available and repo_signals:
-            arch = repo_signals.get('architecture', {})
-            quality = repo_signals.get('quality', {})
-            structure = repo_signals.get('structure', {})
-            layer_score = min(arch.get('layer_count', 0) / 5, 1.0)
-            readme_score = min(quality.get('readme_score', 0) / 3, 1.0)
-            file_score = min(structure.get('total_files', 0) / 30, 1.0)
-            repo_score_val = round(40 * (0.4 * layer_score + 0.3 * readme_score + 0.3 * file_score), 1)
-        else:
-            repo_score_val = 0.0
-
+        
+        # Get component scores ONLY from Sri Satya's canonical evaluation
+        title_score_val = convergence_result.get('title_score', 0.0)
+        desc_score_val = convergence_result.get('description_score', 0.0)
+        repo_score_val = convergence_result.get('repository_score', 0.0)
+        
         analysis = Analysis(
             technical_quality=min(100, int(title_score_val)),
             clarity=min(100, int(desc_score_val)),

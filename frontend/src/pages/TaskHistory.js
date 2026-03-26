@@ -1,49 +1,231 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { History, Search, Filter } from 'lucide-react';
-import { taskService } from '../services/taskService';
-import TaskHistoryTable from '../components/TaskHistoryTable';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { History, Eye, ArrowRight, Calendar, User, FileText, RefreshCw } from 'lucide-react';
 import LoadingState from '../components/LoadingState';
-import ErrorState from '../components/ErrorState';
+import StatusBadge from '../components/StatusBadge';
 
 const TaskHistory = () => {
-    const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['taskHistory'],
-        queryFn: taskService.getTaskHistory,
-    });
+    const navigate = useNavigate();
+    const [historyData, setHistoryData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    if (isLoading) return <LoadingState message="Retrieving your journey logs..." />;
-    if (isError) return <ErrorState message={error.message} onRetry={refetch} />;
+    useEffect(() => {
+        fetchHistoryData();
+    }, []);
 
-    return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-xs">
-                        <History size={14} />
-                        Archive
-                    </div>
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                        Task <span className="text-slate-400">History</span>
+    const fetchHistoryData = async () => {
+        try {
+            setLoading(true);
+            const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const response = await fetch(`${backendUrl}/api/v1/lifecycle/history`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setHistoryData(data);
+                setError(null);
+            } else {
+                setError(`Failed to load history: ${response.status}`);
+            }
+        } catch (err) {
+            setError(`Network error: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getScoreColor = (score) => {
+        if (score >= 80) return 'text-green-600';
+        if (score >= 50) return 'text-yellow-600';
+        return 'text-red-600';
+    };
+
+    const getScoreBgColor = (score) => {
+        if (score >= 80) return 'bg-green-100 dark:bg-green-900/30';
+        if (score >= 50) return 'bg-yellow-100 dark:bg-yellow-900/30';
+        return 'bg-red-100 dark:bg-red-900/30';
+    };
+
+    if (loading) return <LoadingState message="Loading task history..." />;
+    
+    if (error) {
+        return (
+            <div className="max-w-6xl mx-auto space-y-8">
+                <header className="text-center">
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                        Task History
                     </h1>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            className="pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 text-sm transition-all"
-                        />
+                    <p className="text-slate-600 dark:text-slate-400">
+                        View all your previous task submissions
+                    </p>
+                </header>
+                
+                <div className="card text-center py-12">
+                    <div className="text-red-500 mb-4">
+                        <History size={48} className="mx-auto" />
                     </div>
-                    <button className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-                        <Filter size={20} />
+                    <h3 className="text-xl font-bold mb-2">Error Loading History</h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-4">{error}</p>
+                    <button 
+                        onClick={fetchHistoryData}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                    >
+                        <RefreshCw size={16} />
+                        Retry
                     </button>
                 </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-6xl mx-auto space-y-8">
+            {/* Header */}
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                        Task History
+                    </h1>
+                    <p className="text-slate-600 dark:text-slate-400">
+                        {historyData.length} task{historyData.length !== 1 ? 's' : ''} submitted
+                    </p>
+                </div>
+                <button 
+                    onClick={fetchHistoryData}
+                    className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors flex items-center gap-2"
+                >
+                    <RefreshCw size={16} />
+                    Refresh
+                </button>
             </header>
 
-            <TaskHistoryTable tasks={data} />
+            {historyData.length === 0 ? (
+                <div className="card text-center py-12">
+                    <div className="text-6xl mb-4">📚</div>
+                    <h3 className="text-xl font-bold mb-2">No History Yet</h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-6">
+                        Your task history will appear here once you submit tasks.
+                    </p>
+                    <button 
+                        onClick={() => navigate('/submit')}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                        Submit Your First Task
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {historyData.map((task) => (
+                        <div 
+                            key={task.submission_id}
+                            className="card hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                            onClick={() => navigate(`/review/${task.submission_id}`)}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-6 flex-1">
+                                    {/* Score Circle */}
+                                    <div className={`w-16 h-16 rounded-2xl ${getScoreBgColor(task.score)} flex items-center justify-center`}>
+                                        <div className={`text-xl font-black ${getScoreColor(task.score)}`}>
+                                            {task.score}
+                                        </div>
+                                    </div>
+
+                                    {/* Task Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors truncate">
+                                                {task.task_title}
+                                            </h3>
+                                            <StatusBadge status={task.status} />
+                                            {task.has_pdf && (
+                                                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded text-xs">
+                                                    <FileText size={12} />
+                                                    PDF
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+                                            <div className="flex items-center gap-1">
+                                                <User size={14} />
+                                                <span>{task.submitted_by}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Calendar size={14} />
+                                                <span>{new Date(task.submitted_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                                                {task.submission_id}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-3">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/review/${task.submission_id}`);
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                        title="View Review"
+                                    >
+                                        <Eye size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/next/${task.submission_id}`);
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                                        title="View Next Task"
+                                    >
+                                        <ArrowRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Summary Stats */}
+            {historyData.length > 0 && (
+                <div className="grid md:grid-cols-4 gap-4">
+                    <div className="card text-center">
+                        <div className="text-2xl font-black text-blue-600 mb-1">
+                            {historyData.length}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Total Submissions
+                        </div>
+                    </div>
+                    <div className="card text-center">
+                        <div className="text-2xl font-black text-green-600 mb-1">
+                            {historyData.filter(t => t.status === 'pass').length}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Passed
+                        </div>
+                    </div>
+                    <div className="card text-center">
+                        <div className="text-2xl font-black text-yellow-600 mb-1">
+                            {historyData.filter(t => t.status === 'borderline').length}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Borderline
+                        </div>
+                    </div>
+                    <div className="card text-center">
+                        <div className="text-2xl font-black text-slate-600 dark:text-slate-400 mb-1">
+                            {historyData.length > 0 ? Math.round(historyData.reduce((acc, task) => acc + task.score, 0) / historyData.length) : 0}
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Average Score
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -62,8 +62,12 @@ class SignalCollector:
         
         # Step 2: Analyze Repository (if available)
         repo_signals = self.repository_analyzer.analyze(repository_url) if repository_url else {}
-        repo_available = bool(repo_signals and not repo_signals.get('error') and 
-                             repo_signals.get('structure', {}).get('total_files', 0) > 0)
+        # repo_available = True if we got valid signals (no error), regardless of file count
+        repo_available = bool(
+            repo_signals
+            and not repo_signals.get('error')
+            and repo_signals.get('metadata', {}).get('name')
+        )
         logger.info(f"[SIGNAL COLLECTOR] Repository available: {repo_available}")
         
         # Step 3: Match Requirements to Implementation
@@ -105,13 +109,14 @@ class SignalCollector:
             # COMPONENT SIGNALS
             "title_signals": {
                 "technical_keywords": title_signals.get('signals', {}).get('technical_keywords', []),
-                "clarity_indicators": title_signals.get('signals', {}).get('clarity_score', 0),
-                "domain_relevance": title_signals.get('signals', {}).get('domain_relevance', 0)
+                "clarity_indicators": title_signals.get('metrics', {}).get('clarity_score', 0.5),
+                "domain_relevance": title_signals.get('metrics', {}).get('domain_relevance', 0.5)
             },
             "description_signals": {
                 "technical_density": desc_signals.get('metrics', {}).get('technical_term_ratio', 0),
                 "content_depth": desc_signals.get('metrics', {}).get('content_depth', 0),
-                "structure_quality": desc_signals.get('metrics', {}).get('structure_score', 0)
+                "structure_quality": desc_signals.get('metrics', {}).get('structure_score', 0),
+                "technical_density_normalized": desc_signals.get('metrics', {}).get('technical_density', 0)
             },
             "pdf_signals": pdf_signals,
             
@@ -140,23 +145,25 @@ class SignalCollector:
         indicators = []
         
         if not repo_available:
-            indicators.append("repository_not_found")
-        
-        if repo_signals.get('error'):
-            indicators.append(f"repository_error: {repo_signals['error']}")
+            if repo_signals and repo_signals.get('error'):
+                indicators.append(f"repository_error: {repo_signals['error']}")
+            elif not repo_signals:
+                indicators.append("repository_not_found")
         
         missing_features = match_results.get('missing_features', [])
         if len(missing_features) > 0:
             indicators.append(f"missing_features_count: {len(missing_features)}")
         
-        if match_results.get('feature_match_ratio', 0) < 0.3:
+        if match_results.get('feature_match_ratio', 1.0) < 0.3:
             indicators.append("low_feature_match_ratio")
         
-        expected_complexity = intent.get('expected_complexity', 'medium')
-        file_count = repo_signals.get('structure', {}).get('total_files', 0)
-        complexity_thresholds = {"low": 3, "medium": 8, "high": 20}
-        if file_count < complexity_thresholds.get(expected_complexity, 8) * 0.5:
-            indicators.append("insufficient_implementation_scope")
+        # Only flag scope issue when repo is available but genuinely small
+        if repo_available:
+            expected_complexity = intent.get('expected_complexity', 'medium')
+            file_count = repo_signals.get('structure', {}).get('total_files', 0)
+            complexity_thresholds = {"low": 3, "medium": 8, "high": 20}
+            if file_count < complexity_thresholds.get(expected_complexity, 8) * 0.5:
+                indicators.append("insufficient_implementation_scope")
         
         return indicators
     
@@ -179,8 +186,8 @@ class SignalCollector:
             "expected_count": expected_count,
             "delivered_count": delivered_count,
             "missing_count": missing_count,
-            "delivery_ratio": delivered_count / expected_count if expected_count > 0 else 0.0,
-            "completion_percentage": (delivered_count / expected_count * 100) if expected_count > 0 else 0.0,
+            "delivery_ratio": delivered_count / expected_count if expected_count > 0 else 1.0,
+            "completion_percentage": (delivered_count / expected_count * 100) if expected_count > 0 else 100.0,
             "gap_analysis": {
                 "critical_gaps": [f for f in missing_features if 'critical' in str(f).lower()],
                 "major_gaps": [f for f in missing_features if 'major' in str(f).lower()],

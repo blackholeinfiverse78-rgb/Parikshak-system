@@ -6,40 +6,63 @@ from typing import Dict, List, Any
 
 class FeatureMatcher:
     def __init__(self):
-        # Mapping intent keywords to file system patterns
         self.feature_file_patterns = {
-            'api': ['api', 'route', 'controller', 'endpoint', 'fastapi', 'flask'],
-            'database': ['db', 'model', 'schema', 'entity', 'postgres', 'sql', 'mongo'],
-            'auth': ['auth', 'login', 'security', 'jwt', 'session', 'token'],
-            'review': ['review', 'evaluate', 'score', 'audit'],
-            'frontend': ['ui', 'component', 'view', 'react', 'vue', 'style'],
-            'docker': ['dockerfile', 'docker-compose', 'container'],
-            'test': ['test', 'spec', 'jest', 'pytest', 'unittest'],
-            'dashboard': ['dashboard', 'panel', 'home', 'main_view']
+            'api':           ['api', 'route', 'controller', 'endpoint', 'fastapi', 'flask'],
+            'database':      ['db', 'model', 'schema', 'entity', 'postgres', 'sql', 'mongo'],
+            'auth':          ['auth', 'login', 'security', 'jwt', 'session', 'token'],
+            'review':        ['review', 'evaluate', 'score', 'audit'],
+            'evaluation':    ['evaluat', 'score', 'review', 'assess'],
+            'scoring':       ['scor', 'grade', 'evaluat', 'review'],
+            'pipeline':      ['pipeline', 'workflow', 'orchestrat', 'flow'],
+            'orchestrator':  ['orchestrat', 'pipeline', 'workflow', 'coordinator'],
+            'deployment':    ['deploy', 'docker', 'compose', 'kubernetes', 'render', 'ci'],
+            'frontend':      ['ui', 'component', 'view', 'react', 'vue', 'style', 'frontend', 'src'],
+            'dashboard':     ['dashboard', 'panel', 'home', 'main_view'],
+            'docker':        ['dockerfile', 'docker-compose', 'container', '.yml'],
+            'kubernetes':    ['kubernetes', 'k8s', 'helm', 'manifest'],
+            'documentation': ['.md', 'docs', 'readme', 'wiki'],
+            'security':      ['auth', 'security', 'jwt', 'token', 'encrypt'],
+            'login':         ['auth', 'login', 'session', 'token'],
+            'model':         ['model', 'schema', 'entity', 'struct'],
+            'service':       ['service', 'manager', 'handler', 'provider'],
+            'endpoint':      ['api', 'route', 'endpoint', 'controller'],
+            'controller':    ['controller', 'route', 'api', 'handler'],
         }
 
     def compute_match(self, intent: Dict[str, Any], signals: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Comprehensive requirement matching between intent and implementation.
-        """
-        # 1. Feature Matching (Weight 0.5 of total match score if we were calculating one here)
         expected_features = intent.get('expected_features', [])
+        
+        # Build full path list from ALL repo files, not just component buckets
         repo_components = signals.get('components', {})
-        repo_paths = []
+        component_paths = []
         for k in repo_components:
             if isinstance(repo_components[k], list):
-                repo_paths.extend(repo_components[k])
-                
+                component_paths.extend(repo_components[k])
+        
+        # Also include raw structure file list if available (catches Dockerfile, render.yaml etc)
+        structure = signals.get('structure', {})
+        raw_paths = list(structure.get('raw_paths', []))
+        
+        all_paths = list(set(component_paths + raw_paths))
+        
+        # If no paths at all but we have language data, build synthetic paths from extensions
+        if not all_paths and structure.get('languages'):
+            for ext in structure['languages']:
+                all_paths.append(f"file.{ext}")
+        
         implemented_features = []
         missing_features = []
         
         for feature in expected_features:
             is_found = False
-            if any(feature.lower() in p.lower() for p in repo_paths):
+            feature_lower = feature.lower()
+            # Direct name match in any path
+            if any(feature_lower in p.lower() for p in all_paths):
                 is_found = True
             else:
-                synonyms = self.feature_file_patterns.get(feature.lower(), [])
-                if any(syn in p.lower() for p in repo_paths for syn in synonyms):
+                # Synonym match
+                synonyms = self.feature_file_patterns.get(feature_lower, [])
+                if synonyms and any(syn in p.lower() for p in all_paths for syn in synonyms):
                     is_found = True
             
             if is_found:

@@ -10,10 +10,9 @@ class IntentExtractor:
         # Technical keywords to identify expected features/modules
         self.feature_keywords = {
             'api', 'endpoint', 'route', 'controller', 'service', 'database', 'model',
-            'auth', 'login', 'security', 'frontend', 'ui', 'component', 'dashboard',
+            'auth', 'login', 'security', 'frontend', 'dashboard',
             'review', 'evaluation', 'scoring', 'orchestrator', 'pipeline', 'deployment',
-            'docker', 'kubernetes', 'test', 'unit', 'integration', 'documentation',
-            'history', 'lifecycle', 'migration', 'client', 'server'
+            'docker', 'kubernetes', 'documentation'
         }
         
     def extract(self, title: str, description: str, pdf_text: str = "") -> Dict[str, Any]:

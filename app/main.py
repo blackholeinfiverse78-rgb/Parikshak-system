@@ -1,16 +1,21 @@
 """
-Task Review AI - Production Maintenance Mode
-Updated on: 2026-02-05
+Task Review AI - Production
 Version: 1.1.1
 """
+import sys
+import os
+
+# Add intelligence-integration-module to path for canonical engine imports
+_intel_path = os.path.join(os.path.dirname(__file__), '..', 'intelligence-integration-module-main')
+if _intel_path not in sys.path:
+    sys.path.insert(0, _intel_path)
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from .api import task_submit, task_review, next_task, orchestration, lifecycle, tts
+from .api import lifecycle, tts
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-import sys
-import os
 import json
 from dotenv import load_dotenv
 
@@ -76,10 +81,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "System encountered an error. Please contact the demo team."}
     )
 
-app.include_router(task_submit.router, prefix="/api/v1/task", tags=["PROD"])
-app.include_router(task_review.router, prefix="/api/v1/task", tags=["PROD"])
-app.include_router(next_task.router, prefix="/api/v1/task", tags=["PROD"])
-app.include_router(orchestration.router, prefix="/api/v1/orchestration", tags=["V2-Autonomous"])
 app.include_router(lifecycle.router, prefix="/api/v1", tags=["Lifecycle"])
 app.include_router(tts.router, prefix="/api/v1", tags=["TTS"])
 

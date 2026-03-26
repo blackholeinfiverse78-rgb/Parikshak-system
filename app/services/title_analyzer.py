@@ -21,49 +21,40 @@ class TitleAnalyzer:
         }
     
     def analyze(self, title: str, description: str) -> Dict[str, Any]:
-        """Analyze title and return dynamic metrics"""
+        """Analyze title and return SIGNALS ONLY (no scoring)"""
         words = title.lower().split()
         word_count = len(words)
         
-        # Calculate metrics
-        # Optimal title length: 6-15 words. Peak at 8, full score 6-15, penalise outside.
-        if 6 <= word_count <= 15:
-            title_word_count_score = 1.0
-        elif word_count < 6:
-            title_word_count_score = word_count / 6
-        else:
-            title_word_count_score = max(0.5, 1.0 - (word_count - 15) * 0.05)
-
         technical_keywords_found = self._get_technical_terms(words)
-        # Score by absolute count (capped at 4), not ratio — avoids penalising longer titles
-        tech_keyword_score = min(len(technical_keywords_found) / 4, 1.0)
-        duplicate_penalty = self._calculate_duplicate_penalty(words)
-        alignment_score = self._calculate_alignment_score(title, description)
+        duplicate_words = self._get_duplicate_words(words)
+        shared_keywords = self._get_shared_keywords(title, description)
         
-        # Dynamic title score formula
-        title_score = 20 * (
-            0.30 * title_word_count_score +
-            0.40 * tech_keyword_score +
-            0.20 * alignment_score -
-            0.10 * duplicate_penalty
-        )
-        
-        # Clamp between 0 and 20
-        title_score = max(0, min(20, title_score))
+        tech_keyword_ratio = len(technical_keywords_found) / max(word_count, 1)
+        # domain_relevance: how much of the title overlaps with description content
+        domain_relevance = min(len(shared_keywords) / max(word_count, 1), 1.0)
+        # clarity: penalize very short (<3 words) or very long (>12 words) titles
+        if word_count < 3:
+            clarity_score = 0.3
+        elif word_count <= 12:
+            clarity_score = 0.7 + min(len(technical_keywords_found) * 0.1, 0.3)
+        else:
+            clarity_score = 0.5
         
         return {
-            'title_score': round(title_score, 1),
+            'signals': {
+                'technical_keywords': technical_keywords_found,
+                'duplicate_words': duplicate_words,
+                'shared_keywords': shared_keywords,
+                'word_count': word_count,
+                'technical_keyword_count': len(technical_keywords_found),
+                'duplicate_word_count': len(duplicate_words)
+            },
             'metrics': {
                 'title_word_count': word_count,
-                'technical_keyword_ratio': round(len(technical_keywords_found) / max(word_count, 1), 3),
-                'duplicate_word_ratio': round(duplicate_penalty, 3),
-                'alignment_score': round(alignment_score, 3),
-                'title_word_count_score': round(title_word_count_score, 3)
-            },
-            'signals': {
-                'technical_terms_found': technical_keywords_found,
-                'duplicate_words': self._get_duplicate_words(words),
-                'shared_keywords': self._get_shared_keywords(title, description)
+                'technical_keyword_ratio': tech_keyword_ratio,
+                'duplicate_word_ratio': len(duplicate_words) / max(word_count, 1),
+                'domain_relevance': domain_relevance,
+                'clarity_score': clarity_score
             }
         }
     

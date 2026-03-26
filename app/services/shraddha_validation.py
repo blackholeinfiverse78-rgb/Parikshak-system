@@ -114,7 +114,7 @@ class ValidationGate:
     
     def _validate_contract_compliance(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate contract compliance (types, bounds, enums)
+        Validate contract compliance (types, bounds, enums) - RESPECT CANONICAL AUTHORITY
         
         Returns:
             Validation result with corrections needed
@@ -122,17 +122,29 @@ class ValidationGate:
         warnings = []
         corrections = {}
         
-        # Validate score bounds
+        # CRITICAL: Check if this is from canonical authority (Sri Satya)
+        is_canonical = "canonical_authority" in result or "evaluation_basis" in result
+        
+        # Validate score bounds - PRESERVE canonical scores
         score = result.get("score") or result.get("review_summary", {}).get("score", 0)
         if not isinstance(score, (int, float)) or score < 0 or score > 100:
-            warnings.append(f"Score {score} out of bounds [0-100]")
-            corrections["score"] = max(0, min(100, int(score) if isinstance(score, (int, float)) else 0))
+            if not is_canonical:
+                warnings.append(f"Score {score} out of bounds [0-100]")
+                corrections["score"] = max(0, min(100, int(score) if isinstance(score, (int, float)) else 0))
+            else:
+                logger.info(f"[SHRADDHA VALIDATION] Preserving canonical score {score} despite bounds check")
         
-        # Validate status enum
+        # Validate status enum - DERIVE from canonical score if available
         status = result.get("status") or result.get("review_summary", {}).get("status", "fail")
         if status.lower().replace('_', '') not in self.validation_standards["status_values"]:
-            warnings.append(f"Invalid status: {status}")
-            corrections["status"] = "fail"  # Default to fail for invalid status
+            if is_canonical and isinstance(score, (int, float)):
+                # Derive status from canonical score
+                derived_status = self._score_to_status(int(score))
+                warnings.append(f"Invalid status: {status}, deriving from canonical score: {derived_status}")
+                corrections["status"] = derived_status
+            else:
+                warnings.append(f"Invalid status: {status}")
+                corrections["status"] = "fail"  # Default to fail for invalid status
         
         # Validate task_type enum
         task_type = result.get("task_type") or result.get("next_task_summary", {}).get("task_type", "correction")
@@ -154,7 +166,7 @@ class ValidationGate:
     
     def _validate_business_logic(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate business logic consistency
+        Validate business logic consistency - RESPECT CANONICAL AUTHORITY
         
         Returns:
             Validation result with business corrections
@@ -162,27 +174,43 @@ class ValidationGate:
         warnings = []
         corrections = {}
         
+        # CRITICAL: Check if this is from canonical authority
+        is_canonical = "canonical_authority" in result or "evaluation_basis" in result
+        
         score = result.get("score") or result.get("review_summary", {}).get("score", 0)
         status = result.get("status") or result.get("review_summary", {}).get("status", "fail")
         task_type = result.get("task_type") or result.get("next_task_summary", {}).get("task_type", "correction")
         
-        # Business Rule 1: Score-Status Alignment
-        expected_status = self._score_to_status(score)
-        if status.lower().replace('_', '') != expected_status:
-            warnings.append(f"Score {score} inconsistent with status {status}, expected {expected_status}")
-            corrections["status"] = expected_status
+        # Business Rule 1: Score-Status Alignment - DERIVE from canonical score
+        if is_canonical and isinstance(score, (int, float)):
+            expected_status = self._score_to_status(int(score))
+            if status.lower().replace('_', '') != expected_status:
+                warnings.append(f"Deriving status from canonical score {score}: {expected_status}")
+                corrections["status"] = expected_status
+        else:
+            expected_status = self._score_to_status(score)
+            if status.lower().replace('_', '') != expected_status:
+                warnings.append(f"Score {score} inconsistent with status {status}, expected {expected_status}")
+                corrections["status"] = expected_status
         
         # Business Rule 2: Status-TaskType Alignment
-        expected_task_type = self._status_to_task_type(expected_status)
+        final_status = corrections.get("status", status)
+        expected_task_type = self._status_to_task_type(final_status)
         if task_type != expected_task_type:
-            warnings.append(f"Status {expected_status} inconsistent with task_type {task_type}, expected {expected_task_type}")
+            warnings.append(f"Status {final_status} inconsistent with task_type {task_type}, expected {expected_task_type}")
             corrections["task_type"] = expected_task_type
         
-        # Business Rule 3: Readiness Percent Alignment
+        # Business Rule 3: Readiness Percent Alignment - PRESERVE canonical score
         readiness = result.get("readiness_percent") or result.get("review_summary", {}).get("readiness_percent", score)
-        if abs(readiness - score) > 5:  # Allow 5 point variance
-            warnings.append(f"Readiness percent {readiness} should align with score {score}")
-            corrections["readiness_percent"] = score
+        if is_canonical:
+            # For canonical results, readiness should match score exactly
+            if readiness != score:
+                warnings.append(f"Aligning readiness percent with canonical score: {score}")
+                corrections["readiness_percent"] = score
+        else:
+            if abs(readiness - score) > 5:  # Allow 5 point variance for non-canonical
+                warnings.append(f"Readiness percent {readiness} should align with score {score}")
+                corrections["readiness_percent"] = score
         
         return {
             "valid": len(warnings) == 0,
@@ -192,17 +220,24 @@ class ValidationGate:
     
     def _apply_contract_corrections(self, result: Dict[str, Any], corrections: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Apply contract compliance corrections
+        Apply contract compliance corrections - PRESERVE CANONICAL SCORES
         """
         corrected_result = result.copy()
         
         for field, value in corrections.items():
+            # CRITICAL: Do NOT override canonical scores from Sri Satya
+            if field == "score" and "canonical_authority" in result:
+                logger.warning(f"[SHRADDHA VALIDATION] Preserving canonical score {result.get('score')} over correction {value}")
+                continue
+                
             # Apply to top level
             if field in corrected_result:
                 corrected_result[field] = value
             
-            # Apply to review_summary
+            # Apply to review_summary - PRESERVE canonical scores
             if "review_summary" in corrected_result and field in ["score", "status", "readiness_percent"]:
+                if field == "score" and "canonical_authority" in result:
+                    continue  # Preserve canonical score
                 corrected_result["review_summary"][field] = value
             
             # Apply to next_task_summary

@@ -22,14 +22,16 @@ share/python-wheels/
 *.egg
 PYTHONPATH
 
-# Environment files — never commit secrets
+# Environment files — never commit real secrets
 .env
-.env.*
-*.env
 .env.local
-.env.production
 .env.development
 .env.secure
+# Keep these safe templates in git:
+# .env.example  ← committed (no real secrets)
+# .env.production ← committed (placeholder values only)
+!.env.example
+!frontend/.env.production
 
 # Virtual environments
 .venv/

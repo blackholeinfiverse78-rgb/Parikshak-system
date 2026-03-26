@@ -80,6 +80,7 @@ class CanonicalIntelligenceEngine:
     ) -> Dict[str, Any]:
         """
         PRIMARY evaluation authority - evidence-based scoring
+        SINGLE SOURCE OF TRUTH for ALL scores including component scores
         """
         # Extract evidence from supporting signals
         expected_vs_delivered = supporting_signals.get("expected_vs_delivered_evidence", {})
@@ -87,19 +88,27 @@ class CanonicalIntelligenceEngine:
         failure_indicators = supporting_signals.get("failure_indicators", [])
         
         # Calculate canonical score based on evidence
-        score = self._calculate_canonical_score(
+        total_score = self._calculate_canonical_score(
             expected_vs_delivered, missing_features, failure_indicators, supporting_signals
         )
         
+        # CANONICAL COMPONENT SCORING - SINGLE AUTHORITY
+        title_score = self._calculate_title_score_internal(supporting_signals)
+        description_score = self._calculate_description_score_internal(supporting_signals)
+        repository_score = self._calculate_repository_score_internal(supporting_signals)
+        
         # Determine status (pass/borderline/fail)
-        status = self._determine_status(score)
+        status = self._determine_status(total_score)
         
         return {
-            "score": score,
+            "score": total_score,
             "status": status,
-            "readiness_percent": score,
+            "readiness_percent": total_score,
             "evaluation_basis": "canonical_intelligence",
             "authority_level": "PRIMARY",
+            "title_score": title_score,
+            "description_score": description_score,
+            "repository_score": repository_score,
             "evidence_summary": {
                 "expected_features": expected_vs_delivered.get("expected_count", 0),
                 "delivered_features": expected_vs_delivered.get("delivered_count", 0),
@@ -118,47 +127,47 @@ class CanonicalIntelligenceEngine:
     ) -> int:
         """
         Canonical scoring algorithm - SINGLE SOURCE OF TRUTH
+        Uses component scores as the foundation, then applies evidence adjustments
         """
-        score = 100  # Start with perfect score
+        # STEP 1: Calculate component scores (foundation)
+        title_score = self._calculate_title_score_internal(supporting_signals)
+        description_score = self._calculate_description_score_internal(supporting_signals)
+        repository_score = self._calculate_repository_score_internal(supporting_signals)
         
-        # EVIDENCE 1: Delivery ratio (primary factor)
-        delivery_ratio = expected_vs_delivered.get('delivery_ratio', 0.0)
-        if delivery_ratio < 1.0:
-            delivery_penalty = int((1 - delivery_ratio) * 50)  # Up to 50 points
-            score -= delivery_penalty
+        # Base score from components
+        base_score = title_score + description_score + repository_score
+        
+        logger.info(f"[CANONICAL] Component scores: Title={title_score:.1f}, Description={description_score:.1f}, Repository={repository_score:.1f}, Base={base_score:.1f}")
+        
+        # STEP 2: Apply evidence-based adjustments (not replacements)
+        adjusted_score = base_score
+        
+        # EVIDENCE 1: Delivery ratio adjustment (minor impact)
+        delivery_ratio = expected_vs_delivered.get('delivery_ratio', 1.0)
+        if delivery_ratio < 0.8:  # Only penalize if significantly low
+            delivery_penalty = int((0.8 - delivery_ratio) * 20)  # Up to 16 points
+            adjusted_score -= delivery_penalty
             logger.info(f"[CANONICAL] Delivery penalty: {delivery_penalty} (ratio: {delivery_ratio:.2f})")
         
-        # EVIDENCE 2: Missing features impact
+        # EVIDENCE 2: Missing features adjustment (moderate impact)
         if missing_features:
-            # Progressive penalties based on feature criticality
-            critical_count = len([f for f in missing_features if 'critical' in str(f).lower()])
-            major_count = len([f for f in missing_features if 'major' in str(f).lower()])
-            minor_count = len(missing_features) - critical_count - major_count
-            
-            score -= critical_count * 20  # 20 points per critical
-            score -= major_count * 15     # 15 points per major  
-            score -= minor_count * 5      # 5 points per minor
-            
-            logger.info(f"[CANONICAL] Missing features penalty: Critical={critical_count}, Major={major_count}, Minor={minor_count}")
+            missing_penalty = min(len(missing_features) * 5, 20)  # Max 20 points
+            adjusted_score -= missing_penalty
+            logger.info(f"[CANONICAL] Missing features penalty: {missing_penalty} ({len(missing_features)} features)")
         
-        # EVIDENCE 3: Failure indicators
-        for indicator in failure_indicators:
-            if 'repository_not_found' in indicator:
-                score -= 25  # Major penalty for missing repo
-            elif 'repository_error' in indicator:
-                score -= 15  # Penalty for repo access issues
-            elif 'low_feature_match_ratio' in indicator:
-                score -= 20  # Penalty for poor implementation match
-            else:
-                score -= 10  # General failure penalty
-        
-        # EVIDENCE 4: Repository quality bonus
-        if supporting_signals.get("repository_available"):
-            score += 5  # Small bonus for having implementation
+        # EVIDENCE 3: Failure indicators adjustment - exclude missing_features_count to avoid double-penalty
+        non_duplicate_indicators = [
+            f for f in failure_indicators
+            if not f.startswith("missing_features_count")
+        ]
+        failure_penalty = min(len(non_duplicate_indicators) * 3, 15)  # Max 15 points
+        if failure_penalty > 0:
+            adjusted_score -= failure_penalty
+            logger.info(f"[CANONICAL] Failure indicators penalty: {failure_penalty} ({len(non_duplicate_indicators)} indicators)")
         
         # Ensure bounds
-        final_score = max(0, min(100, score))
-        logger.info(f"[CANONICAL] Final score: {final_score}")
+        final_score = max(0, min(100, int(adjusted_score)))
+        logger.info(f"[CANONICAL] Final score: {final_score} (base: {base_score:.1f}, adjusted: {adjusted_score:.1f})")
         return final_score
     
     def _determine_status(self, score: int) -> str:
@@ -274,6 +283,84 @@ class CanonicalIntelligenceEngine:
             return "reinforcement"
         else:
             return "correction"
+    
+    def _calculate_title_score_internal(self, supporting_signals: Dict[str, Any]) -> float:
+        """
+        Internal title scoring for canonical calculation
+        """
+        title_signals = supporting_signals.get("title_signals", {})
+        technical_keywords = title_signals.get("technical_keywords", [])
+        clarity_score = title_signals.get("clarity_indicators", 0.7)
+        domain_relevance = title_signals.get("domain_relevance", 0.8)
+        
+        # Canonical scoring algorithm
+        tech_keyword_score = min(len(technical_keywords) / 4, 1.0) if technical_keywords else 0.3
+        clarity_normalized = clarity_score if isinstance(clarity_score, (int, float)) else 0.7
+        domain_normalized = domain_relevance if isinstance(domain_relevance, (int, float)) else 0.8
+        
+        title_score = 20 * (0.40 * tech_keyword_score + 0.30 * clarity_normalized + 0.30 * domain_normalized)
+        logger.info(f"[CANONICAL] Title score: {title_score:.1f} (keywords={len(technical_keywords)}, clarity={clarity_normalized:.2f}, domain={domain_normalized:.2f})")
+        return max(0, min(20, title_score))
+    
+    def _calculate_description_score_internal(self, supporting_signals: Dict[str, Any]) -> float:
+        """
+        Internal description scoring for canonical calculation
+        """
+        desc_signals = supporting_signals.get("description_signals", {})
+        content_depth = desc_signals.get("content_depth", 0.5)
+        # Use pre-normalized technical_density (0-1) directly; avoid double-normalization
+        technical_density = desc_signals.get("technical_density_normalized") or desc_signals.get("technical_density", 0.1)
+        structure_quality = desc_signals.get("structure_quality", 0.5)
+        
+        depth_normalized = content_depth if isinstance(content_depth, (int, float)) else 0.5
+        tech_normalized = min(float(technical_density), 1.0) if isinstance(technical_density, (int, float)) else 0.1
+        structure_normalized = structure_quality if isinstance(structure_quality, (int, float)) else 0.5
+        
+        description_score = 40 * (
+            0.35 * depth_normalized +
+            0.35 * tech_normalized +
+            0.30 * structure_normalized
+        )
+        logger.info(f"[CANONICAL] Description score: {description_score:.1f} (depth={depth_normalized:.2f}, tech={tech_normalized:.2f}, structure={structure_normalized:.2f})")
+        return max(0, min(40, description_score))
+    
+    def _calculate_repository_score_internal(self, supporting_signals: Dict[str, Any]) -> float:
+        repo_available = supporting_signals.get("repository_available", False)
+        repo_signals = supporting_signals.get("repository_signals") or {}
+        
+        # Network failure: repo URL was provided but API call failed
+        # Give a neutral partial score rather than 0
+        if not repo_available:
+            has_error = bool(repo_signals.get("error"))
+            if has_error and repo_signals.get("error") == "network_failure":
+                logger.info("[CANONICAL] Repository score: using neutral fallback (network failure)")
+                return 15.0  # Neutral partial score - can't penalize for network issues
+            logger.info("[CANONICAL] Repository score: 0.0 (not available)")
+            return 0.0
+        
+        quality_signals = supporting_signals.get("quality_signals") or repo_signals.get("quality", {})
+        architecture_signals = supporting_signals.get("architecture_signals") or repo_signals.get("architecture", {})
+        
+        readme_score = quality_signals.get("readme_score", 0)       # 0-3 scale
+        doc_density = quality_signals.get("documentation_density", 0)  # 0-1 ratio
+        code_quality = min((readme_score / 3.0 + min(doc_density, 1.0)) / 2, 1.0)
+        
+        layer_count = architecture_signals.get("layer_count", 0)
+        architecture_score = min(layer_count / 4.0, 1.0) if layer_count else (0.3 if architecture_signals.get("modular") else 0.1)
+        
+        documentation_quality = min(doc_density + (readme_score / 3.0) * 0.5, 1.0)
+        
+        file_count = repo_signals.get("structure", {}).get("total_files", 0)
+        file_bonus = min(file_count / 20, 1.0)
+        
+        repository_score = 40 * (
+            0.3 * code_quality +
+            0.3 * architecture_score +
+            0.2 * documentation_quality +
+            0.2 * file_bonus
+        )
+        logger.info(f"[CANONICAL] Repository score: {repository_score:.1f} (files={file_count}, quality={code_quality:.2f}, arch={architecture_score:.2f}, docs={documentation_quality:.2f})")
+        return max(0, min(40, repository_score))
 
 # Global canonical intelligence instance
 canonical_intelligence = CanonicalIntelligenceEngine()

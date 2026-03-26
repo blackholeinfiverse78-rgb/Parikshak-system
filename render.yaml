@@ -1,16 +1,17 @@
 services:
-  # Backend API (FastAPI)
   - type: web
     name: task-review-backend
     env: python
     plan: free
+    region: oregon
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.7
       - key: ALLOWED_ORIGINS
-        value: '["https://task-review-agent-frontend.vercel.app"]'
+        value: '["https://task-review-agent.vercel.app","https://task-review-frontend.vercel.app","http://localhost:3000"]'
       - key: GITHUB_TOKEN
         sync: false
       - key: GROQ_API_KEY
