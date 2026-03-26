@@ -12,21 +12,26 @@ const ConnectionStatus = () => {
     const checkConnection = async () => {
         const url = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
         setBackendUrl(url);
-        
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+
         try {
             const response = await fetch(`${url}/health`, {
                 method: 'GET',
-                timeout: 5000
+                signal: controller.signal,
+                mode: 'cors'
             });
-            
+            clearTimeout(timer);
             if (response.ok) {
                 setStatus('connected');
             } else {
                 setStatus('error');
             }
         } catch (error) {
+            clearTimeout(timer);
             console.error('Connection test failed:', error);
-            setStatus('disconnected');
+            setStatus(error.name === 'AbortError' ? 'error' : 'disconnected');
         }
     };
 
@@ -50,7 +55,7 @@ const ConnectionStatus = () => {
             case 'disconnected':
                 return 'Backend Disconnected';
             case 'error':
-                return 'Backend Error';
+                return 'Backend Starting (cold start)...';
             default:
                 return 'Checking Connection...';
         }
