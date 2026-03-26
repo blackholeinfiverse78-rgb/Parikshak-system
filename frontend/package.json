@@ -23,9 +23,9 @@
         "tailwind-merge": "^3.5.0"
     },
     "scripts": {
-        "start": "node --no-deprecation node_modules/.bin/react-scripts start",
-        "build": "node --no-deprecation node_modules/.bin/react-scripts build",
-        "test": "node --no-deprecation node_modules/.bin/react-scripts test",
+        "start": "node --no-deprecation node_modules/react-scripts/bin/react-scripts.js start",
+        "build": "node --no-deprecation node_modules/react-scripts/bin/react-scripts.js build",
+        "test": "node --no-deprecation node_modules/react-scripts/bin/react-scripts.js test",
         "eject": "react-scripts eject"
     },
     "eslintConfig": {
