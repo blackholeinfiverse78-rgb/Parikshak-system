@@ -1,49 +1,77 @@
-import React, { useState, useRef } from 'react';
-import { Volume2, Square } from 'lucide-react';
-import Button from './ui/Button';
+import React, { useState, useRef, useEffect } from 'react';
+import { Volume2, Square, Loader } from 'lucide-react';
 import { taskService } from '../services/taskService';
 
-const TtsButton = ({ text, lang = 'en', tone = 'educational', className = '' }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
+const TtsButton = ({ text, lang = 'en', tone = 'neutral', className = '' }) => {
+    const [state, setState] = useState('idle'); // idle | loading | playing | error
     const audioRef = useRef(null);
 
-    const handleToggle = () => {
-        if (isPlaying) {
+    // Stop and clean up when text changes or component unmounts
+    useEffect(() => {
+        return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
-                audioRef.current.currentTime = 0;
+                audioRef.current.src = '';
+                audioRef.current = null;
             }
-            setIsPlaying(false);
-        } else {
-            const ttsUrl = taskService.getTtsStream(text, lang, tone);
-            if (!audioRef.current) {
-                audioRef.current = new Audio(ttsUrl);
-                audioRef.current.onended = () => setIsPlaying(false);
-            } else {
-                audioRef.current.src = ttsUrl;
-            }
+        };
+    }, [text]);
 
-            audioRef.current.play()
-                .then(() => setIsPlaying(true))
-                .catch(err => {
-                    console.error("TTS Play Error:", err);
-                    setIsPlaying(false);
-                });
+    const handleToggle = () => {
+        if (state === 'playing') {
+            audioRef.current?.pause();
+            if (audioRef.current) audioRef.current.currentTime = 0;
+            setState('idle');
+            return;
         }
+
+        if (!text?.trim()) return;
+
+        setState('loading');
+        const ttsUrl = taskService.getTtsStream(text, lang, tone);
+
+        if (!audioRef.current) {
+            audioRef.current = new Audio();
+        }
+
+        audioRef.current.src = ttsUrl;
+        audioRef.current.oncanplaythrough = null;
+        audioRef.current.onended = () => setState('idle');
+        audioRef.current.onerror = () => setState('error');
+
+        audioRef.current.play()
+            .then(() => setState('playing'))
+            .catch(() => setState('error'));
     };
 
+    const icon = {
+        idle:    <Volume2 size={15} />,
+        loading: <Loader size={15} className="animate-spin" />,
+        playing: <Square size={15} fill="currentColor" />,
+        error:   <Volume2 size={15} className="opacity-40" />,
+    }[state];
+
+    const label = {
+        idle:    'Listen',
+        loading: 'Loading',
+        playing: 'Stop',
+        error:   'Unavailable',
+    }[state];
+
     return (
-        <Button
-            variant="ghost"
-            size="sm"
+        <button
             onClick={handleToggle}
-            className={`flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${className}`}
+            disabled={state === 'loading' || state === 'error' || !text?.trim()}
+            title={state === 'error' ? 'TTS unavailable' : label}
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold
+                text-blue-600 dark:text-blue-400
+                hover:bg-blue-50 dark:hover:bg-blue-900/20
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-colors ${className}`}
         >
-            {isPlaying ? <Square size={16} fill="currentColor" /> : <Volume2 size={16} />}
-            <span className="text-xs font-bold uppercase tracking-wider">
-                {isPlaying ? "Stop" : "Listen"}
-            </span>
-        </Button>
+            {icon}
+            <span>{label}</span>
+        </button>
     );
 };
 
