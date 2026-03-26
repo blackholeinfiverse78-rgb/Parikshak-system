@@ -3,6 +3,9 @@
     "version": "1.0.0",
     "private": true,
     "homepage": ".",
+    "engines": {
+        "node": "20.x"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/blackholeinfiverse78-rgb/Task-Review-Agent-Full-Product-Evolution.git"
