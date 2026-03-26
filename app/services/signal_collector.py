@@ -191,7 +191,7 @@ class SignalCollector:
             "gap_analysis": {
                 "critical_gaps": [f for f in missing_features if 'critical' in str(f).lower()],
                 "major_gaps": [f for f in missing_features if 'major' in str(f).lower()],
-                "minor_gaps": [f for f in missing_features if f not in [g for g in missing_features if 'critical' in str(f).lower() or 'major' in str(f).lower()]]
+                "minor_gaps": [f for f in missing_features if 'critical' not in str(f).lower() and 'major' not in str(f).lower()]
             }
         }
     

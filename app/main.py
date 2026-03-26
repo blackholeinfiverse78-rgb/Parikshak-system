@@ -38,7 +38,7 @@ app = FastAPI(
 allowed_origins = os.getenv("ALLOWED_ORIGINS", '["*"]')
 try:
     origins = json.loads(allowed_origins)
-except:
+except (json.JSONDecodeError, ValueError):
     origins = ["*"]
 
 app.add_middleware(

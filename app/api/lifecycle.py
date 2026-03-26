@@ -106,6 +106,13 @@ async def submit_task(
     """
     Submit task for review with optional PDF support.
     """
+    # Validate field lengths that Form() doesn't enforce
+    if len(task_title) < 5 or len(task_title) > 100:
+        raise HTTPException(status_code=422, detail="task_title must be 5-100 characters")
+    if len(task_description) < 10 or len(task_description) > 100000:
+        raise HTTPException(status_code=422, detail="task_description must be 10-100000 characters")
+    if len(submitted_by) < 2 or len(submitted_by) > 50:
+        raise HTTPException(status_code=422, detail="submitted_by must be 2-50 characters")
     try:
         # 1. Handle PDF Processing
         pdf_file_path = None

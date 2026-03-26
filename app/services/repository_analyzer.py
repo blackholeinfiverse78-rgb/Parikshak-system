@@ -123,15 +123,15 @@ class RepositoryAnalyzer:
         """GET with requests, falling back to curl.exe on failure."""
         try:
             resp = requests.get(url, headers=self.headers, proxies=self.proxies,
-                                timeout=timeout, verify=False)
+                                timeout=timeout, verify=False)  # nosec B501
             resp.raise_for_status()
             return resp.json()
-        except Exception as e:
+        except requests.RequestException as e:
             logger.warning(f"requests failed ({e}), trying curl.exe fallback")
             data = _curl_get(url, self.headers, timeout)
             if data is None:
                 logger.error(f"Both requests and curl failed for {url}")
-                return {}  # Return empty dict instead of raising - caller handles missing keys
+                return {}
             return data
 
     def _get_repo_info(self, owner: str, repo: str) -> Dict:

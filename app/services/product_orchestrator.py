@@ -10,8 +10,7 @@ import uuid
 import logging
 
 from ..core.interfaces.review_engine_interface import ReviewEngineInterface
-from ..models.schemas import Task, ReviewOutput
-from ..models.persistent_storage import (
+from ..models.schemas import Task, ReviewOutputfrom ..models.persistent_storage import (
     TaskSubmission,
     ReviewRecord,
     NextTaskRecord,
@@ -241,8 +240,11 @@ class ProductOrchestrator:
         )
         product_storage.store_next_task(next_task_record)
         
-        # Update submission status
-        submission.status = TaskStatus.SUBMITTED
+        # Update submission status to REVIEWED
+        reviewed_submission = TaskSubmission(
+            **{**submission.dict(), "status": TaskStatus.REVIEWED}
+        )
+        product_storage.store_submission(reviewed_submission)
 
         # Return FINAL CONVERGENCE response
         return self._create_convergence_response(convergence_result, task, previous_task_id, review_id, next_task_id)

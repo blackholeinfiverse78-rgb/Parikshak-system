@@ -13,7 +13,9 @@ from datetime import datetime
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main'))
+_intel_path = os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main')
+if _intel_path not in sys.path:
+    sys.path.insert(0, _intel_path)
 
 from engine.canonical_intelligence_engine import canonical_intelligence as sri_satya_intelligence
 from .shraddha_validation import validation_gate
@@ -83,7 +85,7 @@ class FinalConvergenceOrchestrator:
             logger.warning(f"[FINAL CONVERGENCE] Registry validation failed: {registry_result.reason}")
             # Return rejection through validation gate with DETERMINISTIC ID
             import hashlib
-            content_hash = hashlib.md5(f"{task_title}{task_description}{module_id}{schema_version}".encode()).hexdigest()[:12]
+            content_hash = hashlib.md5(f"{task_title}{task_description}{module_id}{schema_version}".encode(), usedforsecurity=False).hexdigest()[:12]
             rejection_result = {
                 "submission_id": f"rejected-{content_hash}",
                 "score": 0,
@@ -218,11 +220,11 @@ class FinalConvergenceOrchestrator:
         
         # Create deterministic base from content
         content_base = f"{task_title}{task_description}{module_id}{schema_version}"
-        content_hash = hashlib.md5(content_base.encode()).hexdigest()[:12]
+        content_hash = hashlib.md5(content_base.encode(), usedforsecurity=False).hexdigest()[:12]
         
         # Add attempt tracking for Vinayak testing protocol
         timestamp_ms = int(time.time() * 1000)
-        attempt_hash = hashlib.md5(f"{content_base}{timestamp_ms}".encode()).hexdigest()[:8]
+        attempt_hash = hashlib.md5(f"{content_base}{timestamp_ms}".encode(), usedforsecurity=False).hexdigest()[:8]
         
         submission_id = f"sub-{content_hash}-{attempt_hash}"
         next_task_id = f"next-{content_hash}-{attempt_hash}"
