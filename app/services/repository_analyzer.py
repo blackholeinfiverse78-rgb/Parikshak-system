@@ -18,6 +18,8 @@ logger = logging.getLogger("repository_analyzer")
 
 load_dotenv()
 
+_SAFE_REPO_SEGMENT = re.compile(r'^[a-zA-Z0-9_.-]{1,100}$')
+
 def _curl_get(url: str, headers: dict, timeout: int = 15) -> Optional[dict]:
     """Fallback HTTP GET using curl.exe (uses WinINet DNS, bypasses broken system DNS)."""
     try:
@@ -116,7 +118,13 @@ class RepositoryAnalyzer:
             repo = match.group(2)
             if repo.endswith('.git'):
                 repo = repo[:-4]
-            return match.group(1), repo.rstrip('/')
+            owner = match.group(1)
+            repo = repo.rstrip('/')
+            # CWE-22: validate owner/repo segments before using in URL construction
+            if not _SAFE_REPO_SEGMENT.match(owner) or not _SAFE_REPO_SEGMENT.match(repo):
+                logger.warning(f"Rejected unsafe owner/repo: {owner}/{repo}")
+                return None, None
+            return owner, repo
         return None, None
 
     def _get(self, url: str, timeout: int = 15) -> dict:

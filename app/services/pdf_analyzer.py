@@ -12,6 +12,9 @@ from fastapi import UploadFile, HTTPException
 
 logger = logging.getLogger("pdf_analyzer")
 
+_SAFE_FILENAME_RE = re.compile(r'[^a-zA-Z0-9._-]')
+_MAX_PDF_SIZE = 10 * 1024 * 1024  # 10 MB
+
 class PDFAnalyzer:
     def __init__(self, upload_dir: str = "storage/uploads"):
         self.upload_dir = upload_dir
@@ -29,18 +32,26 @@ class PDFAnalyzer:
         """
         Handles PDF upload, storage, and text extraction.
         """
-        if not file.filename.lower().endswith('.pdf'):
+        if not file.filename or not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
-        # 1. Save File
-        file_path = os.path.join(self.upload_dir, f"{os.urandom(8).hex()}_{file.filename}")
+        # CWE-22: Sanitize filename — strip path components and unsafe chars
+        safe_name = _SAFE_FILENAME_RE.sub('_', os.path.basename(file.filename))[:100]
+        file_path = os.path.join(self.upload_dir, f"{os.urandom(8).hex()}_{safe_name}")
+        # Ensure resolved path stays within upload_dir
+        if not os.path.realpath(file_path).startswith(os.path.realpath(self.upload_dir)):
+            raise HTTPException(status_code=400, detail="Invalid file path.")
+
         try:
-            content = file.file.read()
+            content = file.file.read(_MAX_PDF_SIZE + 1)
+            if len(content) > _MAX_PDF_SIZE:
+                raise HTTPException(status_code=413, detail="PDF exceeds 10 MB limit.")
             with open(file_path, "wb") as f:
                 f.write(content)
-            # Reset pointer for extraction
             file.file.seek(0)
-        except Exception as e:
+        except HTTPException:
+            raise
+        except OSError as e:
             logger.error(f"Failed to save PDF: {e}")
             raise HTTPException(status_code=500, detail="Failed to store the PDF file.")
 

@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+import re
 import logging
 
 logger = logging.getLogger("lifecycle")
@@ -88,6 +89,11 @@ class NextTaskDetailResponse(BaseModel):
     reason: str
     assigned_at: datetime
 
+# CWE-918: allowlist — only accept github.com repo URLs
+_GITHUB_REPO_RE = re.compile(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/?$')
+# CWE-943: allowlist for ID path params
+_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
+
 # Initialize FINAL CONVERGENCE orchestrator
 orchestrator = ProductOrchestrator()  # No legacy review engine needed
 pdf_analyzer = PDFAnalyzer()
@@ -113,6 +119,9 @@ async def submit_task(
         raise HTTPException(status_code=422, detail="task_description must be 10-100000 characters")
     if len(submitted_by) < 2 or len(submitted_by) > 50:
         raise HTTPException(status_code=422, detail="submitted_by must be 2-50 characters")
+    # CWE-918: validate GitHub URL against allowlist before any HTTP request
+    if github_repo_link and not _GITHUB_REPO_RE.match(github_repo_link):
+        raise HTTPException(status_code=422, detail="github_repo_link must be a valid GitHub repository URL")
     try:
         # 1. Handle PDF Processing
         pdf_file_path = None
@@ -160,9 +169,14 @@ async def submit_task(
                 difficulty=result["next_task"]["difficulty"]
             )
         )
+    except HTTPException:
+        raise
+    except (ValueError, KeyError) as e:
+        logger.error(f"Submission data error: {e}")
+        raise HTTPException(status_code=500, detail="Submission processing failed.")
     except Exception as e:
-        logger.error(f"Submission failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Submission failed: {str(e)}")
+        logger.error(f"Submission unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 @router.get("/history", response_model=List[SubmissionHistoryItem])
 def get_history():
@@ -197,6 +211,9 @@ def get_review(submission_id: str):
     Get stored review output by submission ID.
     Stable contract: Always returns complete review details.
     """
+    # CWE-943: validate ID format before storage lookup
+    if not _ID_RE.match(submission_id):
+        raise HTTPException(status_code=400, detail="Invalid submission ID format")
     review = product_storage.get_review_by_submission(submission_id)
     
     if not review:
@@ -246,6 +263,9 @@ def get_next_task(submission_id: str):
     Get stored next task by submission ID.
     Stable contract: Always returns complete next task details.
     """
+    # CWE-943: validate ID format before storage lookup
+    if not _ID_RE.match(submission_id):
+        raise HTTPException(status_code=400, detail="Invalid submission ID format")
     next_task = product_storage.get_next_task_by_submission(submission_id)
     
     if not next_task:
