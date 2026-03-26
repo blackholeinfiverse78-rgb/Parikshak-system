@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE || 'http://localhost:8000/api/v1',
+    baseURL: process.env.REACT_APP_API_BASE 
+        || 'https://task-review-agent-full-product-evolution-wyki.onrender.com/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },

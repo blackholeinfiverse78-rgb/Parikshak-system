@@ -10,7 +10,8 @@ const ConnectionStatus = () => {
     }, []);
 
     const checkConnection = async () => {
-        const url = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const url = process.env.REACT_APP_BACKEND_URL 
+            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com';
         setBackendUrl(url);
 
         const controller = new AbortController();

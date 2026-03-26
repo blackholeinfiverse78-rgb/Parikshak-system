@@ -39,7 +39,8 @@ export const taskService = {
     },
     getTtsStream: (text, lang = 'en', tone = 'neutral') => {
         const params = new URLSearchParams({ text, lang, tone });
-        const baseUrl = process.env.REACT_APP_API_BASE || 'http://localhost:8000/api/v1';
+        const baseUrl = process.env.REACT_APP_API_BASE 
+            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com/api/v1';
         return `${baseUrl}/tts/speak?${params.toString()}`;
     },
 };
