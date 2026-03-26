@@ -10,7 +10,8 @@ import uuid
 import logging
 
 from ..core.interfaces.review_engine_interface import ReviewEngineInterface
-from ..models.schemas import Task, ReviewOutputfrom ..models.persistent_storage import (
+from ..models.schemas import Task, ReviewOutput
+from ..models.persistent_storage import (
     TaskSubmission,
     ReviewRecord,
     NextTaskRecord,
