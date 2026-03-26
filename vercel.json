@@ -4,8 +4,6 @@
   "outputDirectory": "frontend/build",
   "installCommand": "cd frontend && npm ci",
   "env": {
-    "REACT_APP_API_BASE": "@react_app_api_base",
-    "REACT_APP_BACKEND_URL": "@react_app_backend_url",
     "CI": "false",
     "GENERATE_SOURCEMAP": "false",
     "NODE_VERSION": "20"
