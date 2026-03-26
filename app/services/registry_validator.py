@@ -20,6 +20,10 @@ class LifecycleStage(str, Enum):
     PRODUCTION = "production"
     DEPRECATED = "deprecated"
 
+    @classmethod
+    def allows_work(cls, stage: "LifecycleStage") -> bool:
+        return stage in (cls.DEVELOPMENT, cls.TESTING, cls.PRODUCTION)
+
 @dataclass
 class ValidationResult:
     status: ValidationStatus
@@ -186,10 +190,10 @@ class RegistryValidator:
                 reason=f"Module '{module_id}' is deprecated and cannot accept new work"
             )
         
-        if lifecycle_stage == LifecycleStage.PLANNING:
+        if not LifecycleStage.allows_work(lifecycle_stage):
             return ValidationResult(
                 status=ValidationStatus.INVALID,
-                reason=f"Module '{module_id}' is in planning stage and not ready for work"
+                reason=f"Module '{module_id}' is in {lifecycle_stage} stage and not ready for work"
             )
         
         # Development, Testing, and Production stages allow work

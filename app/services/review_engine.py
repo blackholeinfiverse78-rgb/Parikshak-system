@@ -6,7 +6,6 @@ from typing import Optional
 from ..models.schemas import Task, ReviewOutput, Analysis, Meta
 from ..core.interfaces.review_engine_interface import ReviewEngineInterface
 from .final_convergence import final_convergence
-from .pdf_analyzer import PDFAnalyzer
 import logging
 import time
 
@@ -49,7 +48,7 @@ class ReviewEngine(ReviewEngineInterface):
         if not pdf_text and "--- Extracted PDF Content ---" in description:
             try:
                 pdf_text = description.split("--- Extracted PDF Content ---")[1].strip()
-            except:
+            except (IndexError, AttributeError):
                 pass
 
         # Use final convergence system for evaluation

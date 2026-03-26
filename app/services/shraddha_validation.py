@@ -5,7 +5,7 @@ FINAL CONVERGENCE: All outputs must pass through this validation layer
 from typing import Dict, Any, Optional, List
 import logging
 from datetime import datetime
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 logger = logging.getLogger("shraddha_validation")
 

@@ -9,7 +9,6 @@ from typing import Dict, Any, Optional
 import uuid
 import logging
 
-from ..core.interfaces.review_engine_interface import ReviewEngineInterface
 from ..models.schemas import Task, ReviewOutput
 from ..models.persistent_storage import (
     TaskSubmission,
@@ -30,7 +29,7 @@ class ProductOrchestrator:
     Enforces Assignment Authority > Signal Support > Validation Gate hierarchy
     """
     
-    def __init__(self, review_engine: ReviewEngineInterface = None):
+    def __init__(self, review_engine=None):
         # Legacy review engine for backward compatibility only
         self._review_engine = review_engine
         self.convergence_enabled = True
@@ -175,8 +174,6 @@ class ProductOrchestrator:
         )
         
         supporting_signals = convergence_result.get("supporting_signals", {})
-        quality_signals = supporting_signals.get("quality_signals", {})
-        architecture_signals = supporting_signals.get("architecture_signals", {})
         feature_match_ratio = supporting_signals.get("feature_match_ratio", 0.0)
         repo_score = convergence_result.get("repository_score", 0.0)
         desc_score = convergence_result.get("description_score", 0.0)

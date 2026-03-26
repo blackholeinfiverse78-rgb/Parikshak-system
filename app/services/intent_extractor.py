@@ -3,7 +3,7 @@ Intent Extractor - Step 1 of Deterministic Evaluation
 Extracts core objectives and expected features from task metadata
 """
 import re
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 class IntentExtractor:
     def __init__(self):

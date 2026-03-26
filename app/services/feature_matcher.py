@@ -2,7 +2,7 @@
 Feature Matcher - Step 3 of Deterministic Evaluation
 Compares task intent with repository implementation to calculate coverage.
 """
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 class FeatureMatcher:
     def __init__(self):
