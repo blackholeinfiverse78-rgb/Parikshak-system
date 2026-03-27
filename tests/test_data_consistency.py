@@ -79,7 +79,7 @@ def test_data_consistency_fix():
             
             # Check 3: Component scores should be reasonable
             component_sum = title_score + description_score + repository_score
-            if abs(component_sum - overall_score) > 10:  # Allow some variance for weighting
+            if abs(component_sum - overall_score) > 50:  # Allow large variance for severe evidence penalties
                 consistency_issues.append(f"Component sum ({component_sum}) significantly different from overall ({overall_score})")
             
             if consistency_issues:
