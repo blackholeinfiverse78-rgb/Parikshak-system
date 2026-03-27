@@ -16,7 +16,8 @@ const Dashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            let backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            backendUrl = backendUrl.replace(/\/+$/, '');
             const response = await fetch(`${backendUrl}/api/v1/lifecycle/history`);
             
             if (response.ok) {

@@ -1,8 +1,18 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+    let url = process.env.REACT_APP_API_BASE 
+        || process.env.REACT_APP_BACKEND_URL
+        || 'https://task-review-agent-full-product-evolution-wyki.onrender.com';
+    url = url.replace(/\/+$/, '');
+    if (!url.endsWith('/api/v1')) {
+        url = `${url}/api/v1`;
+    }
+    return url;
+};
+
 const apiClient = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE 
-        || 'https://task-review-agent-full-product-evolution-wyki.onrender.com/api/v1',
+    baseURL: getBaseUrl(),
     headers: {
         'Content-Type': 'application/json',
     },

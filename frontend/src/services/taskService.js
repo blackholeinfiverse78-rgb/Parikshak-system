@@ -18,7 +18,7 @@ export const taskService = {
             formData.append('pdf_file', data.pdf_file);
         }
 
-        const response = await apiClient.post('/lifecycle/submit', formData, {
+        const response = await apiClient.post('lifecycle/submit', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             }
@@ -26,21 +26,26 @@ export const taskService = {
         return response.data;
     },
     getReview: async (taskId) => {
-        const response = await apiClient.get(`/lifecycle/review/${taskId}`);
+        const response = await apiClient.get(`lifecycle/review/${taskId}`);
         return response.data;
     },
     getNextTask: async (taskId) => {
-        const response = await apiClient.get(`/lifecycle/next/${taskId}`);
+        const response = await apiClient.get(`lifecycle/next/${taskId}`);
         return response.data;
     },
     getTaskHistory: async () => {
-        const response = await apiClient.get('/lifecycle/history');
+        const response = await apiClient.get('lifecycle/history');
         return response.data;
     },
     getTtsStream: (text, lang = 'en', tone = 'neutral') => {
         const params = new URLSearchParams({ text, lang, tone });
-        const baseUrl = process.env.REACT_APP_API_BASE 
-            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com/api/v1';
+        let baseUrl = process.env.REACT_APP_API_BASE 
+            || process.env.REACT_APP_BACKEND_URL
+            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com';
+        baseUrl = baseUrl.replace(/\/+$/, '');
+        if (!baseUrl.endsWith('/api/v1')) {
+            baseUrl = `${baseUrl}/api/v1`;
+        }
         return `${baseUrl}/tts/speak?${params.toString()}`;
     },
 };
