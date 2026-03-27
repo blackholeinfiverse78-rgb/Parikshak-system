@@ -40,7 +40,7 @@ This evaluation engine is mathematically predictable. The system provides absolu
 ## Merge Logic Rules
 The system compiles the final evaluation heavily favoring the Authoritative Assignment Engine. The merge logic abides by these immutable bullet rules:
 - The base status (PASS/FAIL) determined by the Assignment Engine is absolute.
-- Signals cannot override assignment failures. If `Assignment = FAIL`, then `Final MUST be FAIL`, regardless of perfect repository or structural signals.
+- Signals cannot override assignment. If `Assignment = FAIL`, then `Final MUST be FAIL`, regardless of perfect repository or structural signals.
 - Supporting signals from the Signal Engine can *refine* the total score algorithmically (e.g., adding bonus points or minor deductions).
 - Supporting signals strictly serve to enrich the `improvement_hints` and `failure_reasons` arrays.
 - Any conflicting data between engines is resolved in favor of the Assignment Engine.
@@ -99,3 +99,10 @@ The deployment is considered successful when it mathematically proves that:
 
 ## Conclusion
 By rigidly enforcing assignment-first evaluation, eliminating parallel validation paths, and guaranteeing that the same input produces the same output under a strict JSON contract, this Task Review Agent serves as a fully predictable, authoritative evaluation pipeline.
+
+## Engine Mapping
+
+- assignment_engine.py → canonical_intelligence_engine.py
+- signal_engine.py → signal_collector.py
+- review_orchestrator.py → product_orchestrator.py
+- validator.py → registry_validator.py
