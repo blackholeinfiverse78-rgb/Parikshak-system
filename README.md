@@ -1,10 +1,10 @@
-# Task Review Agent: Deterministic Hybrid Evaluation System
+# Deterministic Evaluation Engine with Assignment-First Authority, Signal Enrichment and Strict Validation Pipeline
 
 ## Overview
-The Task Review Agent is a production-grade, deterministic hybrid evaluation system designed for rigorous, automated assessment of engineering tasks. It merges multiple evaluation dimensions into a single unified evaluation pipeline, ensuring that all submissions are assessed with absolute consistency, strict validation, and contract-compliant output. The system strictly eliminates parallel evaluation paths, guaranteeing that a single sequential pipeline dictates the final outcome.
+The Task Review Agent is a production-grade evaluation system designed for rigorous assessment of engineering tasks. It merges multiple evaluation dimensions into a single unified evaluation pipeline, ensuring that all submissions are assessed with absolute consistency, strict validation, and contract-compliant output. The system strictly eliminates parallel evaluation paths, guaranteeing that a single sequential pipeline dictates the final outcome.
 
 ## Core Objective
-The primary objective of this system is to evaluate engineering task submissions deterministically. By strictly enforcing an assignment-first evaluation model, the system ensures that functional accuracy and core requirement completeness are the absolute authorities on whether a submission passes or fails. Secondary signals are deliberately constrained to refine feedback rather than dictate core outcomes, resulting in highly reliable and reproducible evaluations.
+The primary objective of this system is to evaluate engineering task submissions deterministically. By strictly enforcing Assignment-first evaluation, the system ensures that functional accuracy and core requirement completeness are the absolute authorities on whether a submission passes or fails. Signals cannot override assignment, meaning they are deliberately constrained to refine feedback rather than dictate core outcomes, resulting in highly reliable and reproducible evaluations using a Deterministic pipeline where Same input produces same output.
 
 ## Evaluation Hierarchy
 The evaluation pipeline operates strictly under the following hierarchical authority:
