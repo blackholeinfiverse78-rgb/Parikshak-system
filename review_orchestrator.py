@@ -1,8 +1,31 @@
 """
-Review Orchestrator
+Review Orchestrator (Single Pipeline Controller)
 
-- Sequential pipeline controller
 - assignment → signals → merge → validation
 """
 
-from app.services.review_orchestrator import *
+from assignment_engine import assignment_engine
+from signal_engine import signal_engine
+from merge_logic import merge_logic
+from validator import validator
+
+def review_orchestrator(input_data):
+    """
+    Main entry point for the deterministic evaluation pipeline.
+    """
+    # 1. Authoritative Assignment
+    assignment = assignment_engine(input_data)
+    
+    # 2. Supporting Signals
+    signals = signal_engine(input_data)
+    
+    # 3. Hierarchical Merge
+    merged = merge_logic(assignment, signals)
+    
+    # 4. Strict Validation
+    return validator(merged)
+
+# Compatibility with existing internal architecture
+from app.services.review_orchestrator import ReviewOrchestrator
+orchestrator_service = ReviewOrchestrator()
+orchestrator_service.review_orchestrator = review_orchestrator

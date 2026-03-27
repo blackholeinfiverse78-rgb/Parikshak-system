@@ -100,7 +100,15 @@ The deployment is considered successful when it mathematically proves that:
 ## 15. Conclusion
 By rigidly enforcing assignment-first evaluation, eliminating parallel validation paths, and guaranteeing that the same input produces the same output under a strict JSON contract, this Task Review Agent serves as a fully predictable, authoritative evaluation pipeline.
 
-## 16. Engine Mapping
+## 16. Explicit Engine Functions
+
+- `assignment_engine()`
+- `signal_engine()`
+- `merge_logic()`
+- `review_orchestrator()`
+- `validator()`
+
+## 17. Engine Mapping
 
 - assignment_engine.py → canonical_intelligence.py
 - signal_engine.py → signal_collector.py

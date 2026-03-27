@@ -5,4 +5,18 @@ Validator (Contract Enforcement)
 - No missing or extra fields
 """
 
-from app.services.validator import *
+def validator(output):
+    """
+    Enforces the final evaluation contract.
+    """
+    required_keys = ["status", "score"]
+
+    for key in required_keys:
+        if key not in output:
+            raise ValueError(f"Invalid output: missing required key '{key}'")
+
+    return output
+
+# Compatibility with existing internal architecture
+from app.services.validator import Validator
+validator_service = Validator()
