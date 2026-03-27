@@ -12,22 +12,18 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.7
-      - key: ALLOWED_ORIGINS
-        fromService:
-          type: web
-          name: task-review-frontend
-          property: url
       - key: GITHUB_TOKEN
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Note: Set ALLOWED_ORIGINS to the frontend URL once assigned
 
-  # 2. Frontend Static Service
+  # 2. Frontend Static Site Service
   - type: web
     name: task-review-frontend
     runtime: static
     plan: free
-    region: oregon
+    # Removed region (static sites cannot have a region)
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     routes:
@@ -39,4 +35,4 @@ services:
         fromService:
           type: web
           name: task-review-backend
-          property: url
+          property: host
