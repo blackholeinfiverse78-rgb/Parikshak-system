@@ -11,7 +11,7 @@ const ConnectionStatus = () => {
 
     const checkConnection = async () => {
         let url = process.env.REACT_APP_BACKEND_URL 
-            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com';
+            || 'https://task-review-agent-full-product-evolution.onrender.com';
         url = url.replace(/\/+$/, '');
         setBackendUrl(url);
 

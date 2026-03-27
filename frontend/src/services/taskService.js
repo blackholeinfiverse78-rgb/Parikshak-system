@@ -41,7 +41,7 @@ export const taskService = {
         const params = new URLSearchParams({ text, lang, tone });
         let baseUrl = process.env.REACT_APP_API_BASE 
             || process.env.REACT_APP_BACKEND_URL
-            || 'https://task-review-agent-full-product-evolution-wyki.onrender.com';
+            || 'https://task-review-agent-full-product-evolution.onrender.com';
         baseUrl = baseUrl.replace(/\/+$/, '');
         if (!baseUrl.endsWith('/api/v1')) {
             baseUrl = `${baseUrl}/api/v1`;

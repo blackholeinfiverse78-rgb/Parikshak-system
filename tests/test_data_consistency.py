@@ -8,7 +8,7 @@ import json
 
 def test_data_consistency_fix():
     """Test the data consistency fix"""
-    base_url = "https://task-review-agent-full-product-evolution-wyki.onrender.com"
+    base_url = "https://task-review-agent-full-product-evolution.onrender.com"
     
     print("DATA CONSISTENCY FIX TEST")
     print("=" * 50)
