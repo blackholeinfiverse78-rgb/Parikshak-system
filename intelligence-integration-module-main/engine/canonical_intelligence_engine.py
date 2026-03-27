@@ -151,7 +151,7 @@ class CanonicalIntelligenceEngine:
         
         # EVIDENCE 2: Missing features adjustment (moderate impact)
         if missing_features:
-            missing_penalty = min(len(missing_features) * 5, 20)  # Max 20 points
+            missing_penalty = min(len(missing_features) * 2, 10)  # Max 10 points (was 20)
             adjusted_score -= missing_penalty
             logger.info(f"[CANONICAL] Missing features penalty: {missing_penalty} ({len(missing_features)} features)")
         
@@ -160,7 +160,7 @@ class CanonicalIntelligenceEngine:
             f for f in failure_indicators
             if not f.startswith("missing_features_count")
         ]
-        failure_penalty = min(len(non_duplicate_indicators) * 3, 15)  # Max 15 points
+        failure_penalty = min(len(non_duplicate_indicators) * 2, 8)  # Max 8 points (was 15)
         if failure_penalty > 0:
             adjusted_score -= failure_penalty
             logger.info(f"[CANONICAL] Failure indicators penalty: {failure_penalty} ({len(non_duplicate_indicators)} indicators)")
@@ -174,9 +174,9 @@ class CanonicalIntelligenceEngine:
         """
         Canonical status determination
         """
-        if score >= 80:
+        if score >= 70:
             return "pass"
-        elif score >= 50:
+        elif score >= 40:
             return "borderline"
         else:
             return "fail"
@@ -294,7 +294,7 @@ class CanonicalIntelligenceEngine:
         domain_relevance = title_signals.get("domain_relevance", 0.8)
         
         # Canonical scoring algorithm
-        tech_keyword_score = min(len(technical_keywords) / 4, 1.0) if technical_keywords else 0.3
+        tech_keyword_score = min(len(technical_keywords) / 2, 1.0) if technical_keywords else 0.5
         clarity_normalized = clarity_score if isinstance(clarity_score, (int, float)) else 0.7
         domain_normalized = domain_relevance if isinstance(domain_relevance, (int, float)) else 0.8
         
@@ -313,7 +313,7 @@ class CanonicalIntelligenceEngine:
         structure_quality = desc_signals.get("structure_quality", 0.5)
         
         depth_normalized = content_depth if isinstance(content_depth, (int, float)) else 0.5
-        tech_normalized = min(float(technical_density), 1.0) if isinstance(technical_density, (int, float)) else 0.1
+        tech_normalized = min(float(technical_density) * 1.5, 1.0) if isinstance(technical_density, (int, float)) else 0.1
         structure_normalized = structure_quality if isinstance(structure_quality, (int, float)) else 0.5
         
         description_score = 40 * (
@@ -346,12 +346,12 @@ class CanonicalIntelligenceEngine:
         code_quality = min((readme_score / 3.0 + min(doc_density, 1.0)) / 2, 1.0)
         
         layer_count = architecture_signals.get("layer_count", 0)
-        architecture_score = min(layer_count / 4.0, 1.0) if layer_count else (0.3 if architecture_signals.get("modular") else 0.1)
+        architecture_score = min(layer_count / 2.0, 1.0) if layer_count else (0.6 if architecture_signals.get("modular") else 0.4)
         
         documentation_quality = min(doc_density + (readme_score / 3.0) * 0.5, 1.0)
         
         file_count = repo_signals.get("structure", {}).get("total_files", 0)
-        file_bonus = min(file_count / 20, 1.0)
+        file_bonus = min(file_count / 10, 1.0)
         
         repository_score = 40 * (
             0.3 * code_quality +
