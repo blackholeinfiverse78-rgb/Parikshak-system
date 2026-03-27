@@ -1,4 +1,5 @@
 services:
+  # 1. Backend Service
   - type: web
     name: task-review-backend
     env: python
@@ -12,8 +13,30 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.7
       - key: ALLOWED_ORIGINS
-        value: '["https://task-review-frontend-kkmt.onrender.com"]'
+        fromService:
+          type: static
+          name: task-review-frontend
+          property: url
       - key: GITHUB_TOKEN
         sync: false
       - key: GROQ_API_KEY
         sync: false
+
+  # 2. Frontend Static Service
+  - type: static
+    name: task-review-frontend
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: ./frontend/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: task-review-backend
+          property: url
