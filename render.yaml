@@ -16,13 +16,14 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*" # Wide open for initial debugging, change to frontend URL later
 
   # 2. Frontend Static Site Service
   - type: web
     name: task-review-frontend
     runtime: static
-    # Removed plan (static sites are free by default)
-    # Removed region (static sites are global)
+    plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     routes:
@@ -30,7 +31,7 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: REACT_APP_API_URL
+      - key: REACT_APP_BACKEND_URL
         fromService:
           type: web
           name: task-review-backend

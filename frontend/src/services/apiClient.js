@@ -5,6 +5,12 @@ const getBaseUrl = () => {
         || process.env.REACT_APP_BACKEND_URL
         || 'https://task-review-agent-full-product-evolution.onrender.com';
     url = url.replace(/\/+$/, '');
+    
+    // Ensure protocol is present
+    if (url && !url.includes('://')) {
+        url = `https://${url}`;
+    }
+
     if (!url.endsWith('/api/v1')) {
         url = `${url}/api/v1`;
     }
