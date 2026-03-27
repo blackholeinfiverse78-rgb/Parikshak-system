@@ -5,13 +5,13 @@ FINAL CONVERGENCE: ONE intelligence system for evaluation + next task generation
 from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
-from models.next_task_model import NextTask
-from engine.decision_rules import DecisionRules
-from engine.architecture_guard import ArchitectureGuard
+from ..models.next_task_model import NextTask
+from .decision_rules import DecisionRules
+from .architecture_guard import ArchitectureGuard
 
-logger = logging.getLogger("canonical_intelligence")
+logger = logging.getLogger("assignment_engine")
 
-class CanonicalIntelligenceEngine:
+class AssignmentEngine:
     """
     Sri Satya's SINGLE INTELLIGENCE AUTHORITY
     
@@ -104,7 +104,7 @@ class CanonicalIntelligenceEngine:
             "score": total_score,
             "status": status,
             "readiness_percent": total_score,
-            "evaluation_basis": "canonical_intelligence",
+            "evaluation_basis": "assignment_engine",
             "authority_level": "PRIMARY",
             "title_score": title_score,
             "description_score": description_score,
@@ -363,4 +363,4 @@ class CanonicalIntelligenceEngine:
         return max(0, min(40, repository_score))
 
 # Global canonical intelligence instance
-canonical_intelligence = CanonicalIntelligenceEngine()
+assignment_engine = AssignmentEngine()

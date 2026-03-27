@@ -102,7 +102,7 @@ By rigidly enforcing assignment-first evaluation, eliminating parallel validatio
 
 ## Engine Mapping
 
-- assignment_engine.py → canonical_intelligence_engine.py
+- assignment_engine.py → canonical_intelligence.py
 - signal_engine.py → signal_collector.py
 - review_orchestrator.py → product_orchestrator.py
 - validator.py → registry_validator.py

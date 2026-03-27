@@ -7,7 +7,7 @@ from enum import Enum
 from dataclasses import dataclass
 import logging
 
-logger = logging.getLogger("registry_validator")
+logger = logging.getLogger("validator")
 
 class ValidationStatus(str, Enum):
     VALID = "VALID"
@@ -30,7 +30,7 @@ class ValidationResult:
     reason: Optional[str] = None
     module_info: Optional[Dict[str, Any]] = None
 
-class RegistryValidator:
+class Validator:
     """
     Registry-aware validation service for structural discipline enforcement
     Validates module_id, lifecycle_stage, and schema_version against Blueprint Registry
@@ -317,4 +317,4 @@ class RegistryValidator:
         return operation in module_info.get("allowed_operations", [])
 
 # Global registry validator instance
-registry_validator = RegistryValidator()
+validator = Validator()

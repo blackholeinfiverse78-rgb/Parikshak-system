@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.registry_validator import registry_validator, ValidationStatus
+from app.services.validator import validator, ValidationStatus
 
 def test_registry_validation():
     print("=" * 60)
@@ -15,7 +15,7 @@ def test_registry_validation():
     
     # Test 1: Valid module
     print("\n[TEST 1] Valid Module Validation")
-    result = registry_validator.validate_complete("task-review-agent", "v1.0")
+    result = validator.validate_complete("task-review-agent", "v1.0")
     print(f"Status: {result.status}")
     print(f"Module: {result.module_info['module_id'] if result.module_info else 'None'}")
     assert result.status == ValidationStatus.VALID
@@ -23,7 +23,7 @@ def test_registry_validation():
     
     # Test 2: Invalid module
     print("\n[TEST 2] Invalid Module Rejection")
-    result = registry_validator.validate_complete("invalid-module", "v1.0")
+    result = validator.validate_complete("invalid-module", "v1.0")
     print(f"Status: {result.status}")
     print(f"Reason: {result.reason}")
     assert result.status == ValidationStatus.INVALID
@@ -32,7 +32,7 @@ def test_registry_validation():
     
     # Test 3: Deprecated module
     print("\n[TEST 3] Deprecated Module Rejection")
-    result = registry_validator.validate_complete("legacy-module", "v0.9")
+    result = validator.validate_complete("legacy-module", "v0.9")
     print(f"Status: {result.status}")
     print(f"Reason: {result.reason}")
     assert result.status == ValidationStatus.INVALID
@@ -41,7 +41,7 @@ def test_registry_validation():
     
     # Test 4: Schema mismatch
     print("\n[TEST 4] Schema Version Mismatch")
-    result = registry_validator.validate_complete("evaluation-engine", "v1.0")
+    result = validator.validate_complete("evaluation-engine", "v1.0")
     print(f"Status: {result.status}")
     print(f"Reason: {result.reason}")
     assert result.status == ValidationStatus.INVALID

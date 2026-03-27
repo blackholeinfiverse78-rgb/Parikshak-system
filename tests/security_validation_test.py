@@ -437,9 +437,9 @@ def test_functionality_with_security():
     
     # Test other components
     try:
-        from app.services.signal_collector import signal_collector
+        from app.services.signal_engine import signal_engine
         
-        signals = signal_collector.collect_supporting_signals(
+        signals = signal_engine.collect_supporting_signals(
             "Test Task",
             "Test Description with technical requirements",
             None

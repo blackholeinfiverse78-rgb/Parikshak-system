@@ -8,12 +8,12 @@
 
 ## 2. CORE EXECUTION FLOW (SINGLE AUTHORITY)
 
-### CANONICAL INTELLIGENCE ENGINE: `intelligence-integration-module-main/engine/canonical_intelligence_engine.py`
+### CANONICAL INTELLIGENCE ENGINE: `app/services/assignment_engine.py`
 **Purpose**: SINGLE EVALUATION AUTHORITY - Sri Satya's canonical intelligence system
 **Authority Level**: CANONICAL_PRIMARY
 **Function**: Combined evaluation + next task generation in ONE system
 
-### SUPPORTING SIGNALS: `app/services/signal_collector.py`
+### SUPPORTING SIGNALS: `app/services/signal_engine.py`
 **Purpose**: Collects technical signals to support canonical intelligence decisions
 **Authority Level**: SUPPORTING_ONLY (can_determine_score = False)
 **Function**: Provides evidence for canonical intelligence evaluation
@@ -30,9 +30,9 @@ Input (multipart/form-data) →
 FastAPI /lifecycle/submit → 
 ProductOrchestrator.process_submission() → 
 FinalConvergence.process_with_convergence() →
-  ├── RegistryValidator.validate() (FIRST GATE)
-  ├── SignalCollector.collect_supporting_signals() (SUPPORTING ONLY)
-  ├── CanonicalIntelligence.evaluate_and_assign() (SINGLE AUTHORITY)
+  ├── Validator.validate() (FIRST GATE)
+  ├── SignalEngine.collect_supporting_signals() (SUPPORTING ONLY)
+  ├── AssignmentEngine.evaluate_and_assign() (SINGLE AUTHORITY)
   └── ValidationGate.validate_final_output() (FINAL GATE) →
 Output (VALIDATED JSON response)
 ```
@@ -120,8 +120,8 @@ submitted_by: "developer"
 - Complete hierarchy enforcement
 
 ### Modified (Convergence Enforcement)
-- `app/services/final_convergence.py` - Uses ONLY canonical intelligence
-- `app/services/product_orchestrator.py` - Enforces single authority flow
+- `app/services/final_convergence.py` - Uses ONLY assignment engine
+- `app/services/review_orchestrator.py` - Enforces single authority flow
 - `app/api/lifecycle.py` - Single evaluation path only
 
 ### Authority Convergence

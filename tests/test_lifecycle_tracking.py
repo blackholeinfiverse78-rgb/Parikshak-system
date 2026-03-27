@@ -4,7 +4,7 @@ Tests for complete lifecycle tracking and integration.
 """
 import pytest
 from datetime import datetime
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage, TaskStatus
@@ -20,7 +20,7 @@ def clear_storage():
 
 def test_lifecycle_tracking_complete():
     """Test complete lifecycle is tracked"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-lifecycle-001",
@@ -42,7 +42,7 @@ def test_lifecycle_tracking_complete():
 
 def test_lifecycle_with_previous_task():
     """Test lifecycle tracking with previous task reference"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-lifecycle-002",
@@ -64,7 +64,7 @@ def test_lifecycle_with_previous_task():
 
 def test_next_task_assignment_correction():
     """Test CORRECTION task assigned for low scores"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-correction",
@@ -85,7 +85,7 @@ def test_next_task_assignment_correction():
 
 def test_next_task_assignment_reinforcement():
     """Test REINFORCEMENT task assigned for medium scores"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     # Create task that scores in reinforcement range (need to mock or use specific content)
     # For now, we'll verify the structure is correct
@@ -106,7 +106,7 @@ def test_next_task_assignment_reinforcement():
 
 def test_storage_relationships_complete():
     """Test all storage relationships are maintained"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-relationships",
@@ -132,7 +132,7 @@ def test_storage_relationships_complete():
 
 def test_get_lifecycle_api():
     """Test get_lifecycle retrieval method"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-lifecycle-api",
@@ -157,7 +157,7 @@ def test_get_lifecycle_api():
 
 def test_next_task_record_fields():
     """Test NextTaskRecord contains all required fields"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-fields",
@@ -186,7 +186,7 @@ def test_next_task_record_fields():
 
 def test_deterministic_task_assignment():
     """Test task assignment is deterministic"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-deterministic",
@@ -208,7 +208,7 @@ def test_deterministic_task_assignment():
 
 def test_response_contract_with_lifecycle():
     """Test response contract includes lifecycle information"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-contract",
@@ -241,7 +241,7 @@ def test_response_contract_with_lifecycle():
 
 def test_no_state_corruption():
     """Test multiple submissions don't corrupt state"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     # Submit multiple tasks
     results = []

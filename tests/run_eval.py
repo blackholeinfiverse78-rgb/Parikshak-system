@@ -1,20 +1,20 @@
 import sys, logging
 logging.disable(logging.CRITICAL)
 
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
 from datetime import datetime
 
 product_storage.clear_all()
-orchestrator = ProductOrchestrator(ReviewEngine())
+orchestrator = ReviewOrchestrator(ReviewEngine())
 
 description = """This repository implements a deterministic Task Review Agent that evaluates task submissions by aligning task title, description, and repository content with system-defined architectural rules. The system is a production-oriented evaluation pipeline, not a probabilistic AI reviewer, ensuring consistent, reproducible, and verifiable scoring outcomes.
 
 ## System Overview
 
-The core enhancement is the integration of a Registry-Aware Validation Layer. Before any scoring occurs, each submission is validated against a Blueprint Registry, enforcing structural discipline. The architecture follows strict separation of concerns: registry_validator.py handles validation, evaluation_engine.py orchestrates scoring, and product_orchestrator.py manages the full lifecycle.
+The core enhancement is the integration of a Registry-Aware Validation Layer. Before any scoring occurs, each submission is validated against a Blueprint Registry, enforcing structural discipline. The architecture follows strict separation of concerns: validator.py handles validation, evaluation_engine.py orchestrates scoring, and review_orchestrator.py manages the full lifecycle.
 
 ## API Contract
 
@@ -50,10 +50,10 @@ status = "pass" if total_score >= 80 else "borderline" if total_score >= 50 else
 
 ## Component Integration
 
-Components integrate through explicit dependency injection. ProductOrchestrator receives a ReviewEngineInterface instance at construction, decoupling orchestration from evaluation implementation:
+Components integrate through explicit dependency injection. ReviewOrchestrator receives a ReviewEngineInterface instance at construction, decoupling orchestration from evaluation implementation:
 
 ```python
-orchestrator = ProductOrchestrator(ReviewEngine())
+orchestrator = ReviewOrchestrator(ReviewEngine())
 result = orchestrator.process_submission(task)
 ```
 
@@ -83,7 +83,7 @@ Test scenarios covered:
 ```
 test_registry_validation.py   — valid, invalid, deprecated, schema-mismatch cases
 test_scoring_engine.py        — deterministic score verification across 3 input tiers
-test_product_orchestrator.py  — full lifecycle integration from submit to next task
+test_review_orchestrator.py  — full lifecycle integration from submit to next task
 test_review_engine.py         — evaluation engine unit tests with mock repository data
 ```
 

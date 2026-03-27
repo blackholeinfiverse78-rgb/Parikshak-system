@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
@@ -15,7 +15,7 @@ from datetime import datetime
 
 class TestRegistryIntegration:
     def setup_method(self):
-        self.orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+        self.orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
         product_storage.clear_all()
     
     def test_valid_module_submission(self):

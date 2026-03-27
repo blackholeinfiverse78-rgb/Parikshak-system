@@ -38,7 +38,7 @@ def test_core_files():
     print("\n🔍 TESTING CORE EXECUTION FILES...")
     
     core_files = {
-        "ProductOrchestrator": project_root / "app" / "services" / "product_orchestrator.py",
+        "ReviewOrchestrator": project_root / "app" / "services" / "review_orchestrator.py",
         "EvaluationEngine": project_root / "app" / "services" / "evaluation_engine.py", 
         "TaskIntelligenceEngine": project_root / "intelligence-integration-module-main" / "engine" / "task_intelligence_engine.py"
     }
@@ -48,7 +48,7 @@ def test_core_files():
         
         with open(file_path, 'r') as f:
             content = f.read()
-            if name == "ProductOrchestrator":
+            if name == "ReviewOrchestrator":
                 assert "submit_task" in content, f"❌ {name} missing submit_task method"
             elif name == "EvaluationEngine":
                 assert "evaluate" in content, f"❌ {name} missing evaluate method"
@@ -62,7 +62,7 @@ def test_integration_points():
     print("\n🔍 TESTING INTEGRATION POINTS...")
     
     # Check registry validator
-    registry_file = project_root / "app" / "services" / "registry_validator.py"
+    registry_file = project_root / "app" / "services" / "validator.py"
     assert registry_file.exists(), "❌ Registry validator missing"
     
     # Check scoring engine

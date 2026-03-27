@@ -5,7 +5,7 @@ Debug Test - Trace the canonical intelligence engine execution
 import requests
 import json
 
-def debug_canonical_intelligence():
+def debug_assignment_engine():
     """Debug the canonical intelligence engine"""
     base_url = "http://localhost:8000"
     
@@ -74,4 +74,4 @@ def debug_canonical_intelligence():
         print(response.text)
 
 if __name__ == "__main__":
-    debug_canonical_intelligence()
+    debug_assignment_engine()

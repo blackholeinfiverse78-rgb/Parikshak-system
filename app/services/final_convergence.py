@@ -11,16 +11,10 @@ from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
 
-import sys
-import os
-_intel_path = os.path.join(os.path.dirname(__file__), '..', '..', 'intelligence-integration-module-main')
-if _intel_path not in sys.path:
-    sys.path.insert(0, _intel_path)
-
-from engine.canonical_intelligence_engine import canonical_intelligence as sri_satya_intelligence
+from .assignment_engine import assignment_engine as sri_satya_intelligence
 from .shraddha_validation import validation_gate
-from .signal_collector import signal_collector
-from .registry_validator import registry_validator, ValidationStatus
+from .signal_engine import signal_engine
+from .validator import validator, ValidationStatus
 
 logger = logging.getLogger("final_convergence")
 
@@ -42,7 +36,7 @@ class FinalConvergenceOrchestrator:
         self.convergence_enforced = True
         self.authority_hierarchy = {
             "PRIMARY": "assignment_authority",
-            "SUPPORTING": "signal_collector", 
+            "SUPPORTING": "signal_engine", 
             "FINAL_GATE": "validation_gate"
         }
     
@@ -79,7 +73,7 @@ class FinalConvergenceOrchestrator:
         
         # STEP 1: Registry Validation (Structural Discipline Enforcement)
         logger.info("[FINAL CONVERGENCE] Step 1: Registry Validation")
-        registry_result = registry_validator.validate_complete(module_id, schema_version)
+        registry_result = validator.validate_complete(module_id, schema_version)
         
         if registry_result.status == ValidationStatus.INVALID:
             logger.warning(f"[FINAL CONVERGENCE] Registry validation failed: {registry_result.reason}")
@@ -102,7 +96,7 @@ class FinalConvergenceOrchestrator:
         
         # STEP 2: Signal Collection (SUPPORTING DATA ONLY)
         logger.info("[FINAL CONVERGENCE] Step 2: Signal Collection (Supporting Data)")
-        supporting_signals = signal_collector.collect_supporting_signals(
+        supporting_signals = signal_engine.collect_supporting_signals(
             task_title=task_title,
             task_description=task_description,
             repository_url=repository_url,
@@ -154,7 +148,7 @@ class FinalConvergenceOrchestrator:
             )
             
             final_result = validation_gate.validate_final_output(
-                api_format_result, "canonical_intelligence"
+                api_format_result, "assignment_engine"
             )
             
         except Exception as e:
@@ -263,7 +257,7 @@ class FinalConvergenceOrchestrator:
             
             # CRITICAL: Mark as canonical authority to preserve scores
             "canonical_authority": True,
-            "evaluation_basis": "sri_satya_canonical_intelligence",
+            "evaluation_basis": "sri_satya_assignment_engine",
             "evidence_summary": canonical_result.get("evidence_summary", {}),
             
             # CRITICAL: Pass through Sri Satya's CANONICAL component scores
@@ -339,7 +333,7 @@ class FinalConvergenceOrchestrator:
         converged_result["convergence_metadata"] = {
             "orchestrator": "final_convergence",
             "hierarchy_enforced": True,
-            "canonical_intelligence": "SINGLE_AUTHORITY",
+            "assignment_engine": "SINGLE_AUTHORITY",
             "signal_evaluation": "SUPPORTING",
             "validation_layer": "FINAL_WRAPPER",
             "convergence_timestamp": datetime.now().isoformat(),

@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger("lifecycle")
 
-from ..services.product_orchestrator import ProductOrchestrator
+from ..services.review_orchestrator import ReviewOrchestrator
 from ..services.review_engine import ReviewEngine
 from ..models.schemas import Task
 from ..models.persistent_storage import product_storage
@@ -95,7 +95,7 @@ _GITHUB_REPO_RE = re.compile(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.
 _ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
 
 # Initialize FINAL CONVERGENCE orchestrator
-orchestrator = ProductOrchestrator()  # No legacy review engine needed
+orchestrator = ReviewOrchestrator()  # No legacy review engine needed
 pdf_analyzer = PDFAnalyzer()
 
 @router.post("/submit", response_model=TaskSubmitResponse)

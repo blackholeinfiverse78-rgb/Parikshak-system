@@ -18,12 +18,12 @@ from ..models.persistent_storage import (
     product_storage
 )
 from .final_convergence import final_convergence
-from .registry_validator import registry_validator, ValidationStatus
+from .validator import validator, ValidationStatus
 
-logger = logging.getLogger("product_orchestrator")
+logger = logging.getLogger("review_orchestrator")
 
 
-class ProductOrchestrator:
+class ReviewOrchestrator:
     """
     FINAL CONVERGENCE Product Orchestrator
     Enforces Assignment Authority > Signal Support > Validation Gate hierarchy

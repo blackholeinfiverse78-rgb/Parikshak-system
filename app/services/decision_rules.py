@@ -1,4 +1,4 @@
-from registry.task_registry import TASK_REGISTRY
+from ..registry.task_registry import TASK_REGISTRY
 
 
 class DecisionRules:

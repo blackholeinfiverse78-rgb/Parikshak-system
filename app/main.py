@@ -5,11 +5,6 @@ Version: 1.1.1
 import sys
 import os
 
-# Add intelligence-integration-module to path for canonical engine imports
-_intel_path = os.path.join(os.path.dirname(__file__), '..', 'intelligence-integration-module-main')
-if _intel_path not in sys.path:
-    sys.path.insert(0, _intel_path)
-
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError

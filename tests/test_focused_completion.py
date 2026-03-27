@@ -22,18 +22,18 @@ def test_focused_completion():
     print("\n1. Testing STRICT Registry Enforcement...")
     
     try:
-        from app.services.registry_validator import registry_validator
+        from app.services.validator import validator
         
         # Test valid module
-        valid_result = registry_validator.validate_complete("task-review-agent", "v1.0")
+        valid_result = validator.validate_complete("task-review-agent", "v1.0")
         print(f"   Valid Module: {valid_result.status.value}")
         
         # Test invalid module (should BLOCK)
-        invalid_result = registry_validator.validate_complete("invalid-module", "v1.0")
+        invalid_result = validator.validate_complete("invalid-module", "v1.0")
         print(f"   Invalid Module: {valid_result.status.value} (should be INVALID)")
         
         # Test deprecated module (should BLOCK)
-        deprecated_result = registry_validator.validate_complete("legacy-module", "v1.0")
+        deprecated_result = validator.validate_complete("legacy-module", "v1.0")
         print(f"   Deprecated Module: {deprecated_result.status.value} (should be INVALID)")
         
         print("   OK STRICT Registry Enforcement working")

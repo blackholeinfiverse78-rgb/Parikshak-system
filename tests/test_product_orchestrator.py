@@ -4,7 +4,7 @@ Integration tests for deterministic orchestration flow.
 """
 import pytest
 from datetime import datetime
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
@@ -20,7 +20,7 @@ def clear_storage():
 
 def test_process_submission_complete_flow():
     """Test complete orchestration flow from submission to storage"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-flow-001",
@@ -69,7 +69,7 @@ def test_process_submission_complete_flow():
 
 def test_deterministic_orchestration():
     """Test that identical inputs produce identical outputs"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-det-001",
@@ -102,7 +102,7 @@ def test_deterministic_orchestration():
 
 def test_pass_scenario():
     """Test high-quality task with description only (max 20 points)"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-pass-001",
@@ -138,7 +138,7 @@ def test_pass_scenario():
 
 def test_borderline_scenario():
     """Test moderate-quality task with description scoring"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-border-001",
@@ -162,7 +162,7 @@ def test_borderline_scenario():
 
 def test_fail_scenario():
     """Test low-quality task yields FAIL status"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-fail-001",
@@ -182,7 +182,7 @@ def test_fail_scenario():
 
 def test_storage_relationships():
     """Test that storage maintains proper relationships"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-rel-001",
@@ -207,7 +207,7 @@ def test_storage_relationships():
 
 def test_response_contract_stability():
     """Test that response contract is stable and complete"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     task = Task(
         task_id="task-contract-001",
@@ -248,7 +248,7 @@ def test_error_handling():
         def evaluate(self, task):
             raise Exception("Simulated engine failure")
     
-    orchestrator = ProductOrchestrator(review_engine=FailingEngine())
+    orchestrator = ReviewOrchestrator(review_engine=FailingEngine())
     
     task = Task(
         task_id="task-error-001",

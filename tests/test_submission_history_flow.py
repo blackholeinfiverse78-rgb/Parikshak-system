@@ -8,7 +8,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
@@ -25,7 +25,7 @@ def test_submission_to_history_flow():
     
     # Initialize orchestrator
     review_engine = ReviewEngine()
-    orchestrator = ProductOrchestrator(review_engine)
+    orchestrator = ReviewOrchestrator(review_engine)
     
     print("\n1. TESTING TASK SUBMISSION")
     print("-" * 30)

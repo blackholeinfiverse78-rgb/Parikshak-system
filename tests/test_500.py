@@ -1,11 +1,11 @@
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
 from datetime import datetime
 
 product_storage.clear_all()
-orchestrator = ProductOrchestrator(ReviewEngine())
+orchestrator = ReviewOrchestrator(ReviewEngine())
 
 task = Task(
     task_id='test-001',

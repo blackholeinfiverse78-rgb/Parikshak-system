@@ -11,9 +11,9 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'intelligence-integration-module-main'))
 
 from app.services.final_convergence import final_convergence
-from app.services.registry_validator import registry_validator, ValidationStatus
+from app.services.validator import validator, ValidationStatus
 from app.models.schemas import Task
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from datetime import datetime
 import logging
 
@@ -49,7 +49,7 @@ def test_single_authority_system():
     
     # Verify single authority
     assert valid_result.get('canonical_authority') == True, "Canonical authority not enforced"
-    assert valid_result.get('evaluation_basis') == 'canonical_intelligence', "Wrong evaluation basis"
+    assert valid_result.get('evaluation_basis') == 'assignment_engine', "Wrong evaluation basis"
     
     # TEST 2: Invalid registry submission
     print("\n2. TESTING INVALID REGISTRY SUBMISSION")
@@ -110,7 +110,7 @@ def test_orchestrator_integration():
     print("ORCHESTRATOR INTEGRATION TEST")
     print("=" * 60)
     
-    orchestrator = ProductOrchestrator()
+    orchestrator = ReviewOrchestrator()
     
     # Create test task
     task = Task(

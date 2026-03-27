@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any
 
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
@@ -17,7 +17,7 @@ class StabilityTester:
     """Deterministic stability testing for lifecycle system"""
     
     def __init__(self):
-        self.orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+        self.orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
         self.results = []
         self.errors = []
     

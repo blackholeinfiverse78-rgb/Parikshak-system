@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage, TaskStatus
@@ -20,7 +20,7 @@ def test_lifecycle_execution():
     product_storage.clear_all()
     
     # Initialize orchestrator
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     
     # Create test task
     task = Task(

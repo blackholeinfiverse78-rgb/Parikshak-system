@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'intelligence-integration-module-main'))
 
 from app.services.final_convergence import final_convergence
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
 from datetime import datetime
@@ -155,7 +155,7 @@ def test_next_task_generation():
     print("\n4. TESTING FULL ORCHESTRATOR FLOW")
     print("-" * 60)
     
-    orchestrator = ProductOrchestrator()
+    orchestrator = ReviewOrchestrator()
     
     task = Task(
         task_id="test-orchestrator-001",

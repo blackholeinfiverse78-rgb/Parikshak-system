@@ -17,8 +17,8 @@ import pytest
 # ─────────────────────────────────────────────
 class TestRepoAvailability:
     def setup_method(self):
-        from app.services.signal_collector import SignalCollector
-        self.sc = SignalCollector()
+        from app.services.signal_engine import SignalEngine
+        self.sc = SignalEngine()
 
     def test_repo_available_true_when_metadata_name_present(self):
         """repo_available must be True when metadata.name exists, even if total_files=0"""
@@ -62,8 +62,8 @@ class TestRepoScoreNetworkFailure:
         if intel_path not in sys.path:
             sys.path.insert(0, intel_path)
         try:
-            from engine.canonical_intelligence_engine import CanonicalIntelligenceEngine
-            self.engine = CanonicalIntelligenceEngine()
+            from engine.assignment_engine import AssignmentEngine
+            self.engine = AssignmentEngine()
         except Exception:
             self.engine = None
 
@@ -196,8 +196,8 @@ class TestTitleAnalyzer:
 # ─────────────────────────────────────────────
 class TestDeliveryRatio:
     def setup_method(self):
-        from app.services.signal_collector import SignalCollector
-        self.sc = SignalCollector()
+        from app.services.signal_engine import SignalEngine
+        self.sc = SignalEngine()
 
     def test_delivery_ratio_is_1_when_no_features_expected(self):
         intent = {"expected_features": [], "expected_modules": [], "expected_tech_stack": [], "expected_architecture": "Standard", "expected_complexity": "low"}
@@ -219,8 +219,8 @@ class TestDeliveryRatio:
 # ─────────────────────────────────────────────
 class TestFailureIndicators:
     def setup_method(self):
-        from app.services.signal_collector import SignalCollector
-        self.sc = SignalCollector()
+        from app.services.signal_engine import SignalEngine
+        self.sc = SignalEngine()
 
     def test_scope_indicator_not_fired_when_repo_unavailable(self):
         """When repo is unavailable (network failure), scope indicator must NOT fire"""
@@ -260,8 +260,8 @@ class TestNoPenaltyDoubleCounting:
         if intel_path not in sys.path:
             sys.path.insert(0, intel_path)
         try:
-            from engine.canonical_intelligence_engine import CanonicalIntelligenceEngine
-            self.engine = CanonicalIntelligenceEngine()
+            from engine.assignment_engine import AssignmentEngine
+            self.engine = AssignmentEngine()
         except Exception:
             self.engine = None
 

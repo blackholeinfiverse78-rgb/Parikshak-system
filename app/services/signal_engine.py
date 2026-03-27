@@ -14,9 +14,9 @@ from .pdf_analyzer import PDFAnalyzer
 from .title_analyzer import TitleAnalyzer
 from .description_analyzer import DescriptionAnalyzer
 
-logger = logging.getLogger("signal_collector")
+logger = logging.getLogger("signal_engine")
 
-class SignalCollector:
+class SignalEngine:
     """
     SUPPORTING SIGNALS ONLY - NO SCORING AUTHORITY
     
@@ -209,4 +209,4 @@ class SignalCollector:
         )
 
 # Global signal collector instance
-signal_collector = SignalCollector()
+signal_engine = SignalEngine()

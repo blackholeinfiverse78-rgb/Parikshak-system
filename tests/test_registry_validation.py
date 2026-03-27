@@ -7,16 +7,16 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.registry_validator import (
-    RegistryValidator, 
+from app.services.validator import (
+    Validator, 
     ValidationStatus, 
     ValidationResult,
     LifecycleStage
 )
 
-class TestRegistryValidator:
+class TestValidator:
     def setup_method(self):
-        self.validator = RegistryValidator()
+        self.validator = Validator()
     
     def test_validate_module_id_valid(self):
         """Test validation of existing module ID"""

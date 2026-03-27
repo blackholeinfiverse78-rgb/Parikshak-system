@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root))
 
 def test_entry_point():
@@ -37,9 +37,8 @@ def test_core_files():
     print("\nTESTING CORE EXECUTION FILES...")
     
     core_files = {
-        "ProductOrchestrator": project_root / "app" / "services" / "product_orchestrator.py",
-        "EvaluationEngine": project_root / "app" / "services" / "evaluation_engine.py", 
-        "TaskIntelligenceEngine": project_root / "intelligence-integration-module-main" / "engine" / "task_intelligence_engine.py"
+        "ReviewOrchestrator": project_root / "app" / "services" / "review_orchestrator.py",
+        "AssignmentEngine": project_root / "app" / "services" / "assignment_engine.py"
     }
     
     for name, file_path in core_files.items():
@@ -47,11 +46,10 @@ def test_core_files():
         
         with open(file_path, 'r') as f:
             content = f.read()
-            if name == "ProductOrchestrator":
+            if name == "ReviewOrchestrator":
                 assert "process_submission" in content, f"{name} missing process_submission method"
-            elif name == "EvaluationEngine":
-                assert "evaluate" in content, f"{name} missing evaluate method"
-            elif name == "TaskIntelligenceEngine":
+            elif name == "AssignmentEngine":
+                assert "evaluate_and_assign" in content, f"{name} missing evaluate_and_assign method"
                 assert "generate_next_task" in content, f"{name} missing generate_next_task method"
         
         print(f"PASS: {name} verified - file exists with required methods")
@@ -61,11 +59,11 @@ def test_integration_points():
     print("\nTESTING INTEGRATION POINTS...")
     
     # Check registry validator
-    registry_file = project_root / "app" / "services" / "registry_validator.py"
+    registry_file = project_root / "app" / "services" / "validator.py"
     assert registry_file.exists(), "Registry validator missing"
     
-    # Check scoring engine
-    scoring_file = project_root / "app" / "services" / "scoring_engine.py"
+    # Check signal engine
+    scoring_file = project_root / "app" / "services" / "signal_engine.py"
     assert scoring_file.exists(), "Scoring engine missing"
     
     # Check schemas
@@ -96,7 +94,7 @@ def test_file_structure():
     required_dirs = [
         "app", "app/api", "app/services", "app/models", "app/core",
         "frontend", "frontend/src", "frontend/src/components", "frontend/src/pages",
-        "tests", "docs", "intelligence-integration-module-main"
+        "tests", "docs"
     ]
     
     for dir_path in required_dirs:
@@ -115,11 +113,11 @@ def test_api_imports():
         print("PASS: FastAPI app imports successfully")
         
         # Test importing core services
-        from app.services.product_orchestrator import ProductOrchestrator
-        print("PASS: ProductOrchestrator imports successfully")
+        from app.services.review_orchestrator import ReviewOrchestrator
+        print("PASS: ReviewOrchestrator imports successfully")
         
-        from app.services.evaluation_engine import EvaluationEngine
-        print("PASS: EvaluationEngine imports successfully")
+        from app.services.assignment_engine import AssignmentEngine
+        print("PASS: AssignmentEngine imports successfully")
         
         # Test importing models
         from app.models.schemas import Task
@@ -134,12 +132,12 @@ def test_real_execution_simulation():
     print("\nTESTING REAL EXECUTION SIMULATION...")
     
     try:
-        from app.services.product_orchestrator import ProductOrchestrator
+        from app.services.review_orchestrator import ReviewOrchestrator
         from app.models.schemas import Task
         from datetime import datetime
         
         # Create orchestrator
-        orchestrator = ProductOrchestrator(review_engine=None)  # Mock for test
+        orchestrator = ReviewOrchestrator(review_engine=None)  # Mock for test
         
         # Create test task
         test_task = Task(

@@ -111,13 +111,13 @@ def test_day_3_output_validation():
     
     try:
         from app.models.schemas import ReviewOutput, Analysis, Meta
-        from app.services.product_orchestrator import ProductOrchestrator
+        from app.services.review_orchestrator import ReviewOrchestrator
         from app.services.review_engine import ReviewEngine
         from app.models.schemas import Task
         from datetime import datetime
         
         # Test contract validation
-        orchestrator = ProductOrchestrator(ReviewEngine())
+        orchestrator = ReviewOrchestrator(ReviewEngine())
         
         test_task = Task(
             task_id="convergence-test",
@@ -170,7 +170,7 @@ def test_hybrid_integration():
     print("=" * 80)
     
     try:
-        from app.services.product_orchestrator import ProductOrchestrator
+        from app.services.review_orchestrator import ReviewOrchestrator
         from app.services.review_engine import ReviewEngine
         from app.models.schemas import Task
         from app.models.persistent_storage import product_storage
@@ -234,7 +234,7 @@ def test_hybrid_integration():
             }
         ]
         
-        orchestrator = ProductOrchestrator(ReviewEngine())
+        orchestrator = ReviewOrchestrator(ReviewEngine())
         results = []
         
         for scenario in test_scenarios:
@@ -298,13 +298,13 @@ def test_determinism():
     print("=" * 80)
     
     try:
-        from app.services.product_orchestrator import ProductOrchestrator
+        from app.services.review_orchestrator import ReviewOrchestrator
         from app.services.review_engine import ReviewEngine
         from app.models.schemas import Task
         from app.models.persistent_storage import product_storage
         from datetime import datetime
         
-        orchestrator = ProductOrchestrator(ReviewEngine())
+        orchestrator = ReviewOrchestrator(ReviewEngine())
         
         # Same task, multiple runs
         test_task = Task(

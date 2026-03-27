@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.services.final_convergence import final_convergence
 from app.services.assignment_authority import assignment_authority
 from app.services.shraddha_validation import validation_gate
-from app.services.signal_collector import signal_collector
+from app.services.signal_engine import signal_engine
 import json
 
 def test_authority_realignment():
@@ -73,13 +73,13 @@ def test_authority_realignment():
     
     return result1, result2, result3
 
-def test_signal_collector_authority():
+def test_signal_engine_authority():
     """Test that Signal Collector has NO scoring authority"""
     print("\n" + "=" * 60)
     print("SIGNAL COLLECTOR AUTHORITY TEST")
     print("=" * 60)
     
-    signals = signal_collector.collect_supporting_signals(
+    signals = signal_engine.collect_supporting_signals(
         task_title="Test Task",
         task_description="Test description with technical requirements",
         repository_url="https://github.com/user/test-repo"
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     try:
         # Run all tests
         pass_borderline_fail = test_authority_realignment()
-        signals = test_signal_collector_authority()
+        signals = test_signal_engine_authority()
         authority = test_assignment_authority_primary()
         validation = test_validation_gate_final()
         hierarchy_passed, hierarchy_checks = verify_hierarchy_enforcement()

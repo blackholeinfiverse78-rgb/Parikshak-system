@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'intelligence-integration-module-main'))
 
 from app.services.final_convergence import final_convergence
-from app.services.registry_validator import registry_validator
+from app.services.validator import validator
 import json
 
 def demonstrate_registry_enforcement():
@@ -116,7 +116,7 @@ def show_blueprint_registry():
     print("BLUEPRINT REGISTRY STRUCTURE")
     print("=" * 80)
     
-    active_modules = registry_validator.list_active_modules()
+    active_modules = validator.list_active_modules()
     
     print("ACTIVE MODULES:")
     for module_id, info in active_modules.items():

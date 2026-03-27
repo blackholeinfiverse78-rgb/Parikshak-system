@@ -3,7 +3,7 @@ Product Core v1 - Determinism Verification
 """
 import pytest
 from datetime import datetime
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.services.review_engine import ReviewEngine
 from app.models.schemas import Task
 from app.models.persistent_storage import product_storage
@@ -31,7 +31,7 @@ FIXED_TASK = Task(
 
 
 def test_determinism_100_iterations():
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     results = []
     for _ in range(100):
         product_storage.clear_all()
@@ -48,7 +48,7 @@ def test_determinism_100_iterations():
 
 
 def test_determinism_multiple_tasks():
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     tasks = [
         Task(task_id="t1", task_title="Short Task", task_description="Objective: Test short.",
              submitted_by="U1", timestamp=datetime.now()),
@@ -66,7 +66,7 @@ def test_determinism_multiple_tasks():
 
 
 def test_storage_determinism():
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     task = Task(
         task_id="task-storage-det",
         task_title="Storage Determinism Test",
@@ -93,7 +93,7 @@ def test_storage_determinism():
 
 def test_evaluation_time_is_non_negative():
     """Evaluation time must be >= 0 (not hardcoded, just valid)"""
-    orchestrator = ProductOrchestrator(review_engine=ReviewEngine())
+    orchestrator = ReviewOrchestrator(review_engine=ReviewEngine())
     task = Task(
         task_id="task-time-det",
         task_title="Evaluation Time Test",

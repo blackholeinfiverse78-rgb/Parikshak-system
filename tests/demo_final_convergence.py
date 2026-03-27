@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'intelligence-integration-module-main'))
 
 from app.services.final_convergence import final_convergence
-from app.services.product_orchestrator import ProductOrchestrator
+from app.services.review_orchestrator import ReviewOrchestrator
 from app.models.schemas import Task
 from datetime import datetime
 import json
@@ -104,7 +104,7 @@ def demo_orchestrator_integration():
     print("ORCHESTRATOR INTEGRATION DEMO")
     print("=" * 80)
     
-    orchestrator = ProductOrchestrator()
+    orchestrator = ReviewOrchestrator()
     
     # Create demo task
     task = Task(
@@ -134,7 +134,7 @@ def demo_orchestrator_integration():
     print(f"\\nConvergence Metadata:")
     print(f"  Orchestrator: {convergence_meta.get('orchestrator')}")
     print(f"  Hierarchy Enforced: {convergence_meta.get('hierarchy_enforced')}")
-    print(f"  Canonical Intelligence: {convergence_meta.get('canonical_intelligence')}")
+    print(f"  Canonical Intelligence: {convergence_meta.get('assignment_engine')}")
     print(f"  No Parallel Paths: {convergence_meta.get('no_parallel_paths')}")
     
     return True
