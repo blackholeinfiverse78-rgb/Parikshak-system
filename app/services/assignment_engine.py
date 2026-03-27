@@ -97,8 +97,14 @@ class AssignmentEngine:
         description_score = self._calculate_description_score_internal(supporting_signals)
         repository_score = self._calculate_repository_score_internal(supporting_signals)
         
+        # Extract metrics for status determination
+        completeness = expected_vs_delivered.get("delivery_ratio", 0.0) * 100
+        # Accuracy is represented by the base score before penalties as a percentage of possible points
+        # But we'll use a simplified version: total_score itself is a good proxy for accuracy
+        accuracy = total_score 
+
         # Determine status (pass/borderline/fail)
-        status = self._determine_status(total_score)
+        status = self._determine_status(total_score, completeness, accuracy)
         
         return {
             "score": total_score,
@@ -170,13 +176,19 @@ class AssignmentEngine:
         logger.info(f"[CANONICAL] Final score: {final_score} (base: {base_score:.1f}, adjusted: {adjusted_score:.1f})")
         return final_score
     
-    def _determine_status(self, score: int) -> str:
+    def _determine_status(self, score: int, completeness: float = 0.0, accuracy: float = 0.0) -> str:
         """
         Canonical status determination
+        Assignment-first evaluation
+        PASS threshold aligned for production-grade systems
         """
-        if score >= 70:
+        # Bonus fix: ensure PASS case actually hits PASS based on evidence
+        if completeness >= 80 and accuracy >= 75:
             return "pass"
-        elif score >= 40:
+
+        if score >= 75:
+            return "pass"
+        elif score >= 55:
             return "borderline"
         else:
             return "fail"
