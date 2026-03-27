@@ -17,7 +17,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "*" # Wide open for initial debugging, change to frontend URL later
+        value: '["https://task-review-frontend-fjdr.onrender.com"]'
 
   # 2. Frontend Static Site Service
   - type: web
@@ -32,7 +32,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_BACKEND_URL
-        fromService:
-          type: web
-          name: task-review-backend
-          property: host
+        value: "https://task-review-backend-fjdr.onrender.com"

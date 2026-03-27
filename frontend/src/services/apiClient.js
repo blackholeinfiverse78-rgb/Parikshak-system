@@ -3,7 +3,7 @@ import axios from 'axios';
 const getBaseUrl = () => {
     let url = process.env.REACT_APP_API_BASE 
         || process.env.REACT_APP_BACKEND_URL
-        || 'https://task-review-agent-full-product-evolution.onrender.com';
+        || 'https://task-review-backend-fjdr.onrender.com';
     url = url.replace(/\/+$/, '');
     
     // Ensure protocol is present
