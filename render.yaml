@@ -16,14 +16,13 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
-      # Note: Set ALLOWED_ORIGINS to the frontend URL once assigned
 
   # 2. Frontend Static Site Service
   - type: web
     name: task-review-frontend
     runtime: static
-    plan: free
-    # Removed region (static sites cannot have a region)
+    # Removed plan (static sites are free by default)
+    # Removed region (static sites are global)
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     routes:
