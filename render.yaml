@@ -14,7 +14,7 @@ services:
         value: 3.11.7
       - key: ALLOWED_ORIGINS
         fromService:
-          type: static
+          type: static_site
           name: task-review-frontend
           property: url
       - key: GITHUB_TOKEN
@@ -22,8 +22,8 @@ services:
       - key: GROQ_API_KEY
         sync: false
 
-  # 2. Frontend Static Service
-  - type: static
+  # 2. Frontend Static Site Service
+  - type: static_site
     name: task-review-frontend
     env: static
     plan: free
