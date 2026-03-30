@@ -8,7 +8,7 @@ import os
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from .api import lifecycle, tts
+from .api import lifecycle, tts, production
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import json
@@ -78,14 +78,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.include_router(lifecycle.router, prefix="/api/v1", tags=["Lifecycle"])
 app.include_router(tts.router, prefix="/api/v1", tags=["TTS"])
+app.include_router(production.router, prefix="/api/v1", tags=["Production"])
 
 
 @app.get("/")
 async def root():
     return {
-        "message": "Task Review AI Backend is Online",
+        "message": "Parikshak Production System Online",
         "documentation": "/docs",
         "health": "/health",
+        "production_status": "/api/v1/production/system/production-status",
+        "niyantran_endpoint": "/api/v1/production/niyantran/submit",
         "version": "1.1.0"
     }
 

@@ -11,10 +11,13 @@ from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
 
-from .assignment_engine import assignment_engine as sri_satya_intelligence
+from .assignment_engine import assignment_engine
 from .shraddha_validation import validation_gate
-from .signal_engine import signal_engine
-from .validator import validator, ValidationStatus
+from .signal_collector import signal_collector
+from .production_decision_engine import production_decision_engine
+from .bucket_integration import bucket_integration
+from .human_in_loop import human_in_loop
+from .niyantran_connection import niyantran_connection
 
 logger = logging.getLogger("final_convergence")
 
@@ -71,9 +74,31 @@ class FinalConvergenceOrchestrator:
         """
         logger.info(f"[FINAL CONVERGENCE] Starting convergence processing for: {task_title[:50]}...")
         
+        # STEP 0: Review Packet Hard Gate Enforcement
+        logger.info("[FINAL CONVERGENCE] Step 0: Review Packet Hard Gate")
+        packet_result = review_packet_parser.enforce_packet_requirement(".")
+        
+        if not packet_result["valid"]:
+            logger.error(f"[FINAL CONVERGENCE] Review packet validation failed: {packet_result['reason']}")
+            import hashlib
+            content_hash = hashlib.md5(f"{task_title}{task_description}".encode(), usedforsecurity=False).hexdigest()[:12]
+            rejection_result = {
+                "submission_id": f"packet-rejected-{content_hash}",
+                "score": 0,
+                "status": "fail",
+                "readiness_percent": 0,
+                "next_task_id": f"packet-fix-{content_hash}",
+                "task_type": "correction",
+                "title": "Review Packet Creation Task",
+                "difficulty": "foundational",
+                "failure_reasons": [f"Review Packet Missing: {packet_result['reason']}"],
+                "packet_rejection": True
+            }
+            return validation_gate.validate_final_output(rejection_result, "packet_rejection")
+        
         # STEP 1: Registry Validation (Structural Discipline Enforcement)
         logger.info("[FINAL CONVERGENCE] Step 1: Registry Validation")
-        registry_result = validator.validate_complete(module_id, schema_version)
+        registry_result = registry_validator.validate_complete(module_id, schema_version)
         
         if registry_result.status == ValidationStatus.INVALID:
             logger.warning(f"[FINAL CONVERGENCE] Registry validation failed: {registry_result.reason}")
@@ -96,7 +121,7 @@ class FinalConvergenceOrchestrator:
         
         # STEP 2: Signal Collection (SUPPORTING DATA ONLY)
         logger.info("[FINAL CONVERGENCE] Step 2: Signal Collection (Supporting Data)")
-        supporting_signals = signal_engine.collect_supporting_signals(
+        supporting_signals = signal_collector.collect_supporting_signals(
             task_title=task_title,
             task_description=task_description,
             repository_url=repository_url,
@@ -106,7 +131,7 @@ class FinalConvergenceOrchestrator:
         try:
             # STEP 3: Sri Satya Intelligence Evaluation (SINGLE AUTHORITY)
             logger.info("[FINAL CONVERGENCE] Step 3: Sri Satya Intelligence Evaluation (SINGLE AUTHORITY)")
-            canonical_result = sri_satya_intelligence.evaluate_and_assign(
+            canonical_result = assignment_engine.evaluate_and_assign(
                 task_title=task_title,
                 task_description=task_description,
                 supporting_signals=supporting_signals
@@ -139,16 +164,41 @@ class FinalConvergenceOrchestrator:
             }
         
         try:
-            # STEP 4: Validation Gate (FINAL WRAPPER)
-            logger.info("[FINAL CONVERGENCE] Step 4: Validation Gate (Final Wrapper)")
+            # STEP 4: Production Decision Engine
+            logger.info("[FINAL CONVERGENCE] Step 4: Production Decision Engine")
+            decision_result = production_decision_engine.make_decision(
+                canonical_result, supporting_signals, packet_result.get("parsed_data")
+            )
+            
+            # STEP 5: Human-in-Loop Processing
+            logger.info("[FINAL CONVERGENCE] Step 5: Human-in-Loop Processing")
+            enhanced_result = human_in_loop.process_with_human_loop(
+                canonical_result, decision_result, supporting_signals, 
+                f"trace-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            )
+            
+            # STEP 6: Validation Gate (FINAL WRAPPER)
+            logger.info("[FINAL CONVERGENCE] Step 6: Validation Gate (Final Wrapper)")
             
             # Convert canonical result to API format
             api_format_result = self._convert_canonical_to_api_format(
-                canonical_result, supporting_signals, task_title, task_description, module_id, schema_version
+                enhanced_result, supporting_signals, task_title, task_description, module_id, schema_version
             )
             
             final_result = validation_gate.validate_final_output(
-                api_format_result, "assignment_engine"
+                api_format_result, "production_pipeline"
+            )
+            
+            # STEP 7: Bucket Logging
+            logger.info("[FINAL CONVERGENCE] Step 7: Bucket Logging")
+            trace_id = bucket_integration.log_evaluation(
+                enhanced_result, supporting_signals, decision_result,
+                final_result, {
+                    "task_title": task_title,
+                    "task_description": task_description,
+                    "submitted_by": "system",
+                    "github_repo_link": repository_url
+                }
             )
             
         except Exception as e:
