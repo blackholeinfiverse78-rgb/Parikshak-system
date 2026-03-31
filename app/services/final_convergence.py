@@ -19,6 +19,7 @@ from .review_packet_parser import review_packet_parser
 from .production_decision_engine import production_decision_engine
 from .bucket_integration import bucket_integration
 from .human_in_loop import human_in_loop
+from .domain_router import domain_router
 
 logger = logging.getLogger("final_convergence")
 
@@ -128,6 +129,13 @@ class FinalConvergenceOrchestrator:
             repository_url=repository_url,
             pdf_text=pdf_text
         )
+
+        # STEP 2.5: Domain Routing — enrich signals with domain context
+        logger.info("[FINAL CONVERGENCE] Step 2.5: Domain Routing")
+        supporting_signals = domain_router.enrich_signals(
+            supporting_signals, task_title, task_description
+        )
+        logger.info(f"[FINAL CONVERGENCE] Domain detected: {supporting_signals.get('domain', 'unknown')}")
         
         try:
             # STEP 3: Sri Satya Intelligence Evaluation (SINGLE AUTHORITY)

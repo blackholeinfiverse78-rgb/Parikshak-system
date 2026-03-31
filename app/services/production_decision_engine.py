@@ -28,6 +28,31 @@ class QualityRubric:
         else: return "D"
 
 @dataclass
+class EffortScore:
+    """Effort and authenticity scoring — separate dimension from outcome"""
+    description_depth: float    # 0-3: word count + structure quality
+    repo_recency: float         # 0-3: repo available + file count signals
+    requirement_coverage: float # 0-3: how many stated requirements have evidence
+
+    @property
+    def total_effort(self) -> float:
+        return self.description_depth + self.repo_recency + self.requirement_coverage
+
+    @property
+    def effort_grade(self) -> str:
+        t = self.total_effort
+        if t >= 8: return "HIGH"
+        elif t >= 5: return "MEDIUM"
+        elif t >= 2: return "LOW"
+        return "NONE"
+
+    @property
+    def authenticity_score(self) -> float:
+        """0.0-1.0: penalises zero-effort submissions regardless of outcome"""
+        return round(min(self.total_effort / 9.0, 1.0), 3)
+
+
+@dataclass
 class PACDetection:
     """Pass/Approve/Complete detection results"""
     pass_indicators: List[str]
@@ -48,6 +73,9 @@ class ProductionDecisionEngine:
     Implements quality rubric, P/A/C detection, and ≥6 approval logic
     """
     
+    # Domain-specific feature keyword sets used by domain router
+    DOMAIN_FEATURE_SETS: Dict[str, list] = None
+
     def __init__(self):
         self.approval_threshold = 6  # ≥6 for approval
         self.pac_keywords = {
@@ -77,21 +105,25 @@ class ProductionDecisionEngine:
         # Phase 1: P/A/C Detection
         pac_detection = self._detect_pac_signals(evaluation_result, supporting_signals)
         logger.info(f"[DECISION ENGINE] P/A/C signals detected: {pac_detection.pac_score}")
-        
-        # Phase 2: Quality Rubric Assessment
+
+        # Phase 2: Effort / Authenticity Scoring (separate dimension)
+        effort_score = self._assess_effort_score(evaluation_result, supporting_signals)
+        logger.info(f"[DECISION ENGINE] Effort grade: {effort_score.effort_grade} (authenticity: {effort_score.authenticity_score:.3f})")
+
+        # Phase 3: Quality Rubric Assessment
         quality_rubric = self._assess_quality_rubric(evaluation_result, supporting_signals)
         logger.info(f"[DECISION ENGINE] Quality grade: {quality_rubric.quality_grade} (total: {quality_rubric.total_quality:.1f}/9)")
-        
-        # Phase 3: Final Score Computation with caps
-        final_score = self._compute_final_score(score, quality_rubric, pac_detection)
-        
-        # Phase 4: Decision Logic (≥6 approve)
-        decision = self._apply_decision_logic(final_score, quality_rubric, pac_detection)
-        
-        # Phase 5: Structure standardized output
+
+        # Phase 4: Final Score Computation with caps
+        final_score = self._compute_final_score(score, quality_rubric, pac_detection, effort_score)
+
+        # Phase 5: Decision Logic (≥6 approve)
+        decision = self._apply_decision_logic(final_score, quality_rubric, pac_detection, effort_score)
+
+        # Phase 6: Structure standardized output
         standardized_output = self._structure_output(
-            final_score, decision, quality_rubric, pac_detection, 
-            evaluation_result, supporting_signals
+            final_score, decision, quality_rubric, pac_detection,
+            effort_score, evaluation_result, supporting_signals
         )
         
         logger.info(f"[DECISION ENGINE] Final decision: {decision['status']} (score: {final_score})")
@@ -206,34 +238,101 @@ class ProductionDecisionEngine:
             Q_code=q_code
         )
     
+    def _assess_effort_score(
+        self,
+        evaluation_result: Dict[str, Any],
+        supporting_signals: Dict[str, Any]
+    ) -> EffortScore:
+        """Score effort and authenticity as a separate dimension from outcome quality"""
+
+        # description_depth: based on description signal depth
+        desc_signals = supporting_signals.get("description_signals", {})
+        word_count = desc_signals.get("word_count", 0) if isinstance(desc_signals, dict) else 0
+        structure_score = desc_signals.get("structure_quality", 0) if isinstance(desc_signals, dict) else 0
+        if word_count >= 150 and structure_score >= 0.5:
+            description_depth = 3.0
+        elif word_count >= 80 and structure_score >= 0.2:
+            description_depth = 2.0
+        elif word_count >= 30:
+            description_depth = 1.0
+        else:
+            description_depth = 0.0
+
+        # repo_recency: repo present + meaningful file count
+        repo_available = supporting_signals.get("repository_available", False)
+        file_count = supporting_signals.get("implementation_files", 0)
+        if repo_available and file_count >= 10:
+            repo_recency = 3.0
+        elif repo_available and file_count >= 5:
+            repo_recency = 2.0
+        elif repo_available:
+            repo_recency = 1.0
+        else:
+            repo_recency = 0.0
+
+        # requirement_coverage: how many stated requirements have matching evidence
+        expected = len(supporting_signals.get("expected_features", []))
+        implemented = len(supporting_signals.get("implemented_features", []))
+        if expected == 0:
+            coverage_ratio = 1.0
+        else:
+            coverage_ratio = implemented / expected
+        if coverage_ratio >= 0.8:
+            requirement_coverage = 3.0
+        elif coverage_ratio >= 0.5:
+            requirement_coverage = 2.0
+        elif coverage_ratio >= 0.2:
+            requirement_coverage = 1.0
+        else:
+            requirement_coverage = 0.0
+
+        return EffortScore(
+            description_depth=description_depth,
+            repo_recency=repo_recency,
+            requirement_coverage=requirement_coverage
+        )
+
     def _compute_final_score(
-        self, 
-        base_score: int, 
-        quality_rubric: QualityRubric, 
-        pac_detection: PACDetection
+        self,
+        base_score: int,
+        quality_rubric: QualityRubric,
+        pac_detection: PACDetection,
+        effort_score: EffortScore
     ) -> int:
         """Compute final score with alignment, authenticity, and proof caps"""
-        
-        # Start with base score from canonical evaluation
+
         final_score = base_score
-        
+
         # Apply quality rubric bonus (max +15 points)
-        quality_bonus = min(int(quality_rubric.total_quality * 1.67), 15)  # 9 * 1.67 ≈ 15
+        quality_bonus = min(int(quality_rubric.total_quality * 1.67), 15)
         final_score += quality_bonus
-        
+
         # Apply P/A/C detection bonus (max +10 points)
         pac_bonus = min(pac_detection.pac_score * 2, 10)
         final_score += pac_bonus
-        
-        # Apply caps
+
+        # Apply effort bonus (max +5 points) — rewards genuine work
+        effort_bonus = min(int(effort_score.total_effort * 0.55), 5)
+        final_score += effort_bonus
+
         # Alignment cap: If delivery ratio < 0.5, cap at 60
-        evidence_summary = {}  # Would be passed in from evaluation_result
-        delivery_ratio = evidence_summary.get("delivery_ratio", 1.0)  # Default to no cap
+        evidence_summary = {}
+        delivery_ratio = evidence_summary.get("delivery_ratio", 1.0)
         if delivery_ratio < 0.5:
             final_score = min(final_score, 60)
             logger.info(f"[DECISION ENGINE] Alignment cap applied: delivery_ratio={delivery_ratio:.2f}")
+
+        # repo_available needed for effort-based authenticity cap
+        repo_available = "implementation_present" in (pac_detection.complete_indicators or [])
+        # Authenticity cap: driven by effort score — NONE effort caps at 20, LOW at 40
+        if effort_score.effort_grade == "NONE":
+            final_score = min(final_score, 20)
+            logger.info("[DECISION ENGINE] Authenticity cap: NONE effort → cap 20")
+        elif effort_score.effort_grade == "LOW" and not repo_available:
+            final_score = min(final_score, 40)
+            logger.info("[DECISION ENGINE] Authenticity cap: LOW effort + no repo → cap 40")
         
-        # Authenticity cap: If no repository, cap at 40
+        # Legacy authenticity cap: If no repository, cap at 40
         if not pac_detection.complete_indicators or "implementation_present" not in pac_detection.complete_indicators:
             final_score = min(final_score, 40)
             logger.info("[DECISION ENGINE] Authenticity cap applied: no implementation")
@@ -250,19 +349,21 @@ class ProductionDecisionEngine:
         return final_score
     
     def _apply_decision_logic(
-        self, 
-        final_score: int, 
-        quality_rubric: QualityRubric, 
-        pac_detection: PACDetection
+        self,
+        final_score: int,
+        quality_rubric: QualityRubric,
+        pac_detection: PACDetection,
+        effort_score: EffortScore
     ) -> Dict[str, Any]:
         """Apply ≥6 approval logic and determine final decision"""
         
-        # Decision criteria scoring (0-10 scale)
+        # Decision criteria scoring (0-11 scale — effort adds 1 point)
         criteria_scores = {
             "score_threshold": 3 if final_score >= 75 else 2 if final_score >= 60 else 1 if final_score >= 40 else 0,
             "quality_grade": 3 if quality_rubric.quality_grade == "A" else 2 if quality_rubric.quality_grade == "B" else 1 if quality_rubric.quality_grade == "C" else 0,
             "pac_signals": 2 if pac_detection.pac_score >= 5 else 1 if pac_detection.pac_score >= 2 else 0,
-            "evidence_strength": 2 if quality_rubric.Q_proof >= 2 else 1 if quality_rubric.Q_proof >= 1 else 0
+            "evidence_strength": 2 if quality_rubric.Q_proof >= 2 else 1 if quality_rubric.Q_proof >= 1 else 0,
+            "effort_authenticity": 1 if effort_score.effort_grade in ("HIGH", "MEDIUM") else 0
         }
         
         total_criteria_score = sum(criteria_scores.values())
@@ -296,27 +397,38 @@ class ProductionDecisionEngine:
         decision: Dict[str, Any],
         quality_rubric: QualityRubric,
         pac_detection: PACDetection,
+        effort_score: EffortScore,
         evaluation_result: Dict[str, Any],
         supporting_signals: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Structure standardized output exactly as defined"""
-        
+
         return {
             # Core decision
             "score": final_score,
             "decision": decision["status"],
             "confidence": decision["confidence"],
             "task_type": decision["task_type"],
-            
+
             # Quality rubric
             "quality_rubric": {
                 "Q_proof": quality_rubric.Q_proof,
-                "Q_architecture": quality_rubric.Q_architecture, 
+                "Q_architecture": quality_rubric.Q_architecture,
                 "Q_code": quality_rubric.Q_code,
                 "total_quality": quality_rubric.total_quality,
                 "quality_grade": quality_rubric.quality_grade
             },
-            
+
+            # Effort / authenticity (separate scored dimension)
+            "effort_score": {
+                "description_depth": effort_score.description_depth,
+                "repo_recency": effort_score.repo_recency,
+                "requirement_coverage": effort_score.requirement_coverage,
+                "total_effort": effort_score.total_effort,
+                "effort_grade": effort_score.effort_grade,
+                "authenticity_score": effort_score.authenticity_score
+            },
+
             # P/A/C detection
             "pac_detection": {
                 "pass_indicators": pac_detection.pass_indicators,
@@ -325,7 +437,7 @@ class ProductionDecisionEngine:
                 "pac_score": pac_detection.pac_score,
                 "has_pac_signals": pac_detection.has_pac_signals
             },
-            
+
             # Decision criteria
             "decision_criteria": {
                 "criteria_scores": decision["criteria_scores"],
@@ -333,15 +445,16 @@ class ProductionDecisionEngine:
                 "approval_threshold_met": decision["approval_threshold_met"],
                 "threshold": self.approval_threshold
             },
-            
+
             # Metadata
             "decision_metadata": {
                 "engine": "production_decision_engine",
-                "version": "1.0",
+                "version": "1.1",
                 "standardized_output": True,
                 "rubric_applied": True,
                 "pac_detected": True,
-                "caps_applied": True
+                "caps_applied": True,
+                "effort_scored": True
             }
         }
 
