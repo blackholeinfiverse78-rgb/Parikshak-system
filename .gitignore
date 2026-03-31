@@ -84,6 +84,12 @@ coverage.xml
 storage/uploads/*
 !storage/uploads/.gitkeep
 
+# Runtime data — bucket logs and escalation cases (generated at runtime)
+storage/bucket_logs/*
+!storage/bucket_logs/.gitkeep
+storage/escalations/*
+!storage/escalations/.gitkeep
+
 # Temporary files
 *.tmp
 *.temp
