@@ -1,6 +1,7 @@
 import React from 'react';
 import { Target, List, Play, Info } from 'lucide-react';
 import Button from './ui/Button';
+import TtsButton from './TtsButton';
 
 const NextTaskCard = ({ task }) => {
     const getDifficultyColor = (diff) => {
@@ -30,16 +31,32 @@ const NextTaskCard = ({ task }) => {
                             </div>
                             <h3 className="text-2xl font-bold">{task?.title || 'No task title'}</h3>
                         </div>
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${getDifficultyColor(task?.difficulty)}`}>
-                            {task?.difficulty || 'General'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <TtsButton
+                                text={task?.title || ''}
+                                lang="en"
+                                tone="formal"
+                                showControls={true}
+                            />
+                            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${getDifficultyColor(task?.difficulty)}`}>
+                                {task?.difficulty || 'General'}
+                            </span>
+                        </div>
                     </div>
 
                     <div className="space-y-4">
                         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold mb-3">
-                                <List size={18} className="text-blue-500" />
-                                Project Objective
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+                                    <List size={18} className="text-blue-500" />
+                                    Project Objective
+                                </div>
+                                <TtsButton
+                                    text={task?.objective || ''}
+                                    lang="en"
+                                    tone="educational"
+                                    showControls={false}
+                                />
                             </div>
                             <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                                 {task?.objective || 'No objective available for this task.'}
@@ -60,8 +77,11 @@ const NextTaskCard = ({ task }) => {
                         <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
                             <div className="flex items-start gap-3">
                                 <Info size={16} className="text-amber-500 mt-0.5" />
-                                <div>
-                                    <div className="text-xs font-bold text-amber-600 uppercase tracking-tight">System Rationale</div>
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-xs font-bold text-amber-600 uppercase tracking-tight">System Rationale</div>
+                                        <TtsButton text={task?.reason || ''} lang="en" tone="calm" />
+                                    </div>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1 leading-snug">
                                         {task?.reason || 'Task optimized for your current skill progression levels.'}
                                     </p>

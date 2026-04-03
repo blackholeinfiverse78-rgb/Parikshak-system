@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, XCircle, AlertTriangle, FileText, Target, TrendingUp, BarChart3, Settings, Github } from 'lucide-react';
 import LoadingState from '../components/LoadingState';
 import StatusBadge from '../components/StatusBadge';
+import TtsButton from '../components/TtsButton';
 
 const ReviewResult = () => {
     const { taskId } = useParams();
@@ -194,9 +195,12 @@ const ReviewResult = () => {
                             </h3>
                             <ul className="space-y-2">
                                 {reviewData.improvement_hints.map((hint, index) => (
-                                    <li key={index} className="flex items-start gap-2 text-sm">
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                        <span>{hint}</span>
+                                    <li key={index} className="flex items-start justify-between gap-2 text-sm">
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                            <span>{hint}</span>
+                                        </div>
+                                        <TtsButton text={hint} lang="en" tone="educational" className="shrink-0" />
                                     </li>
                                 ))}
                             </ul>
@@ -281,7 +285,15 @@ const ReviewResult = () => {
             {/* Evaluation Summary */}
             {reviewData.evaluation_summary && (
                 <div className="card">
-                    <h3 className="font-bold mb-4">Evaluation Summary</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold">Evaluation Summary</h3>
+                        <TtsButton
+                            text={reviewData.evaluation_summary}
+                            lang="en"
+                            tone="neutral"
+                            showControls={true}
+                        />
+                    </div>
                     <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
                         {reviewData.evaluation_summary}
                     </p>

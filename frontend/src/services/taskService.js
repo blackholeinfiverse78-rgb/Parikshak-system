@@ -48,4 +48,8 @@ export const taskService = {
         }
         return `${baseUrl}/tts/speak?${params.toString()}`;
     },
+    getTtsLanguages: async () => {
+        const response = await apiClient.get('tts/languages');
+        return response.data;
+    },
 };
