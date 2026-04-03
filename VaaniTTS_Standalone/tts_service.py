@@ -11,6 +11,31 @@ import requests
 
 logger = logging.getLogger("vaani_tts")
 
+# Global model instance for lazy loading
+import threading
+_xtts_model = None
+_xtts_lock = threading.Lock()
+
+
+def _get_xtts_model():
+    global _xtts_model
+    if _xtts_model is None:
+        with _xtts_lock:
+            if _xtts_model is None:
+                try:
+                    from TTS.api import TTS
+                    import torch
+                    logger.info("[TTS] Loading Coqui XTTS v2 model (this may take a while)...")
+                    device = "cuda" if torch.cuda.is_available() else "cpu"
+                    _xtts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2", cpu=(device == "cpu"))
+                    if device == "cuda":
+                        _xtts_model.to(device)
+                    logger.info(f"[TTS] XTTS v2 loaded on {device}")
+                except Exception as e:
+                    logger.error(f"[TTS] Failed to initialize XTTS v2: {e}")
+                    raise
+    return _xtts_model
+
 
 def remove_emojis(text: str) -> str:
     emoji_pattern = re.compile(
@@ -67,6 +92,37 @@ def translate_text(text: str, target_language: str = 'en') -> str:
         logger.warning(f"[TTS] Translation failed: {e}")
 
     return text
+
+
+def _xtts_stream(text: str, language: str) -> bytes:
+    """
+    Generate audio using Coqui XTTS v2.
+    Requires 'TTS' and 'torch' installed.
+    """
+    import tempfile
+    import os
+    
+    try:
+        model = _get_xtts_model()
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+            tmp = f.name
+        
+        # Default to Ana Elizabet speaker
+        model.tts_to_file(
+            text=text,
+            speaker="Ana Elizabet",
+            language=language.lower(),
+            file_path=tmp
+        )
+        
+        with open(tmp, 'rb') as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"[TTS] XTTS generation failed: {e}")
+        raise
+    finally:
+        if 'tmp' in locals() and os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 def _gtts_stream(text: str, language: str) -> bytes:
@@ -151,7 +207,15 @@ def text_to_speech_stream(
     if translate and language.lower() != 'en':
         text = translate_text(text, language)
 
-    # Primary: gTTS (works on all platforms)
+    # Primary: Coqui XTTS (Local Neural)
+    try:
+        data = _xtts_stream(text, language)
+        if data:
+            return data
+    except Exception as e:
+        logger.warning(f"[TTS] Coqui XTTS failed: {e} — trying gTTS fallback")
+
+    # Secondary Fallback: gTTS (works on all platforms)
     if use_google_tts:
         try:
             data = _gtts_stream(text, language)
@@ -160,7 +224,7 @@ def text_to_speech_stream(
         except Exception as e:
             logger.warning(f"[TTS] gTTS failed: {e} — trying pyttsx3 fallback")
 
-    # Fallback: pyttsx3 (local only)
+    # Final Fallback: pyttsx3 (local only)
     try:
         data = _pyttsx3_stream(text, language)
         if data:
@@ -168,4 +232,4 @@ def text_to_speech_stream(
     except Exception as e:
         logger.error(f"[TTS] pyttsx3 fallback failed: {e}")
 
-    raise RuntimeError("All TTS engines failed. Check GTTS network access or pyttsx3 installation.")
+    raise RuntimeError("All TTS engines failed. Check XTTS configuration, GTTS network access, or pyttsx3 installation.")
