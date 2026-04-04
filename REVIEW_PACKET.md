@@ -95,47 +95,29 @@ Verified across 3 identical runs: score=7.2, decision=APPROVED, status=pass.
 
 ```json
 {
-  "task_id": "task-001",
   "trace_id": "a3f2c1d4-8b9e-4f2a-b1c3-d4e5f6a7b8c9",
-  "review": {
-    "score": 7.2,
-    "decision": "APPROVED",
-    "status": "pass",
-    "confidence": 0.91,
-    "pac": {
-      "proof": 1,
-      "architecture": 1,
-      "code": 1
-    },
+  "score": 7.2,
+  "decision": "APPROVED",
+  "task_id": "task-001",
+  "candidate_id": "candidate-123",
+  "status": "pass",
+  "confidence": 0.91,
+  "review_summary": {
+    "pac": { "proof": 1, "architecture": 1, "code": 1 },
     "rubric": {
-      "Q_proof": 1,
-      "Q_architecture": 1,
-      "Q_code": 1,
-      "alignment_score": 1,
-      "authenticity_score": 1,
-      "effort_score": 1
+      "Q_proof": 1, "Q_architecture": 1, "Q_code": 1,
+      "alignment_score": 1, "authenticity_score": 1, "effort_score": 1
     },
     "score_breakdown": {
-      "completeness": 0.85,
-      "quality": 1.0,
-      "alignment": 1.0,
-      "authenticity": 1.0,
-      "effort": 1.0,
-      "raw_score": 7.25,
-      "final_score_10": 7.2,
-      "caps_applied": [],
+      "completeness": 0.85, "quality": 1.0, "alignment": 1.0,
+      "authenticity": 1.0, "effort": 1.0, "raw_score": 7.25,
+      "final_score_10": 7.2, "caps_applied": [],
       "formula": "0.35*completeness + 0.25*quality + 0.20*alignment + 0.10*authenticity + 0.10*effort"
     },
-    "strengths": [
-      "Implementation is present and accessible via repository",
-      "Architecture signals detected — layered or modular structure present",
-      "Proof of work present — README, tests, or documentation found"
-    ],
+    "strengths": ["Implementation present", "Architecture detected", "Proof found"],
     "failures": [],
     "root_cause": "All core criteria met — submission approved",
-    "learning_feedback": [
-      "Maintain current quality and expand test coverage for next task"
-    ],
+    "learning_feedback": ["Maintain quality and expand test coverage"],
     "requires_human_review": false
   },
   "next_task": {
@@ -143,7 +125,7 @@ Verified across 3 identical runs: score=7.2, decision=APPROVED, status=pass.
     "task_type": "advancement",
     "title": "Advanced Features Challenge",
     "difficulty": "advanced",
-    "next_direction": "Advance to next complexity level — focus on performance, scalability, or new domain"
+    "next_direction": "Advance to next complexity level"
   },
   "processing_metadata": {
     "processing_time_ms": 1240,
