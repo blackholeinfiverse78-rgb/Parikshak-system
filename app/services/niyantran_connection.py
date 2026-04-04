@@ -11,8 +11,13 @@ from dataclasses import dataclass
 from .final_convergence import final_convergence
 from .production_decision_engine import production_decision_engine
 from .bucket_integration import bucket_integration
+from .task_selection_engine import task_selection_engine
 
 logger = logging.getLogger("niyantran_connection")
+
+# Phase 5 — Trace governance constants
+_TRACE_ID_FIELD = "trace_id"
+_TRACE_ID_MIN_LEN = 8
 
 @dataclass
 class NiyantranTask:
@@ -27,10 +32,18 @@ class NiyantranTask:
     pdf_text: str = ""
     priority: str = "normal"
     deadline: Optional[str] = None
+    trace_id: str = ""  # Phase 5: must come from Niyantran
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "NiyantranTask":
-        """Create NiyantranTask from dictionary"""
+        """Create NiyantranTask from dictionary. Enforces trace_id presence."""
+        trace_id = data.get("trace_id", "").strip()
+        if not trace_id or len(trace_id) < _TRACE_ID_MIN_LEN:
+            raise ValueError(
+                f"[NIYANTRAN] REJECT: trace_id missing or too short "
+                f"(got '{trace_id}', min {_TRACE_ID_MIN_LEN} chars). "
+                "trace_id must come from Niyantran."
+            )
         return cls(
             task_id=data.get("task_id", ""),
             task_title=data.get("task_title", ""),
@@ -41,7 +54,8 @@ class NiyantranTask:
             schema_version=data.get("schema_version", "v1.0"),
             pdf_text=data.get("pdf_text", ""),
             priority=data.get("priority", "normal"),
-            deadline=data.get("deadline")
+            deadline=data.get("deadline"),
+            trace_id=trace_id
         )
 
 @dataclass
@@ -99,33 +113,38 @@ class NiyantranConnectionService:
         logger.info(f"[NIYANTRAN] Processing task from Niyantran: {task_data.get('task_title', 'Unknown')[:50]}...")
         
         try:
-            # Step 1: Parse Niyantran task
+            # Step 1: Parse Niyantran task — enforces trace_id
             niyantran_task = NiyantranTask.from_dict(task_data)
-            
+            trace_id = niyantran_task.trace_id  # Phase 5: use Niyantran trace_id
+
             # Step 2: Execute full evaluation pipeline
             evaluation_result = self._execute_evaluation_pipeline(niyantran_task)
-            
+
             # Step 3: Make production decision
             decision_result = production_decision_engine.make_decision(
                 evaluation_result["evaluation"],
                 evaluation_result["supporting_signals"],
                 evaluation_result.get("packet_data")
             )
-            
-            # Step 4: Generate next task
-            next_task_result = self._generate_next_task(
-                evaluation_result["evaluation"],
-                decision_result,
-                niyantran_task
+
+            # Step 4: Select next task from Niyantran task graph (Phase 2)
+            score_10   = evaluation_result["evaluation"].get("score_10", 0)
+            decision   = decision_result.get("decision", "REJECTED")
+            difficulty = evaluation_result["evaluation"].get("difficulty", "beginner")
+            next_task_result = task_selection_engine.select_next_task(
+                score_10=score_10,
+                decision=decision,
+                current_difficulty=difficulty
             )
-            
-            # Step 5: Log to bucket
-            trace_id = bucket_integration.log_evaluation(
+
+            # Step 5: Log to bucket with Niyantran trace_id (Phase 5)
+            bucket_integration.log_evaluation(
                 evaluation_result["evaluation"],
                 evaluation_result["supporting_signals"],
                 decision_result,
                 next_task_result,
-                task_data
+                task_data,
+                trace_id=trace_id  # always from Niyantran
             )
             
             # Step 6: Create Niyantran response

@@ -63,6 +63,7 @@ class BucketIntegrationService:
         return trace_id
 
     def get_evaluation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Phase 5 allowed read: evaluation index (same_task_history)."""
         index_file = os.path.join(self.bucket_path, "evaluation_index.jsonl")
         if not os.path.exists(index_file):
             return []
@@ -77,6 +78,7 @@ class BucketIntegrationService:
         return logs
 
     def get_evaluation_by_trace_id(self, trace_id: str) -> Optional[Dict[str, Any]]:
+        """Phase 5 allowed read: specific evaluation by trace_id (same_task_history)."""
         for days_back in range(7):
             from datetime import timedelta
             date_str = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
@@ -93,6 +95,31 @@ class BucketIntegrationService:
             except Exception as e:
                 logger.error(f"[BUCKET] Error reading {log_file}: {e}")
         return None
+
+    def get_escalation_cases(self, candidate_id: str) -> List[Dict[str, Any]]:
+        """
+        Phase 5 allowed read: escalation_cases for a specific candidate.
+        ONLY returns entries where candidate_id matches.
+        """
+        all_logs = self.get_evaluation_logs(1000)
+        return [
+            log for log in all_logs
+            if log.get("candidate_id") == candidate_id
+            and log.get("review_summary", {}).get("requires_human_review", False)
+        ]
+
+    def reject_unauthorised_read(self, read_type: str) -> Dict[str, Any]:
+        """
+        Phase 5: Reject any read not in allowed_reads.
+        allowed_reads = [same_task_history, escalation_cases]
+        """
+        allowed = ["same_task_history", "escalation_cases"]
+        logger.error(f"[BUCKET] REJECTED unauthorised read type: {read_type}")
+        return {
+            "error": "BUCKET_READ_REJECTED",
+            "reason": f"Read type '{read_type}' not in allowed_reads: {allowed}",
+            "allowed_reads": allowed
+        }
 
     def get_bucket_stats(self) -> Dict[str, Any]:
         stats = {

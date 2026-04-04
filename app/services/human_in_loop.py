@@ -115,58 +115,83 @@ class HumanInLoopService:
         decision_result: Dict[str, Any],
         supporting_signals: Dict[str, Any]
     ) -> ConfidenceMetrics:
-        logger.info("[HUMAN-IN-LOOP] Calculating confidence metrics")
+        """
+        Phase 3 — Hardened confidence formula (deterministic, no heuristics):
 
-        base_confidence = decision_result.get("confidence", 0.5)
+          confidence = (proof + architecture + code + rubric_completeness) / total
 
-        quality_rubric = decision_result.get("quality_rubric", {})
-        quality_grade = quality_rubric.get("quality_grade", "D")
-        quality_adjustment = self._calculate_quality_adjustment(quality_grade, quality_rubric)
+          Where:
+            proof               = pac.proof          (0 or 1)
+            architecture        = pac.architecture   (0 or 1)
+            code                = pac.code           (0 or 1)
+            rubric_completeness = rubric_sum / 6     (0.0–1.0, 6 binary criteria)
+            total               = 4  (three binary + one normalised)
 
-        pac_detection = decision_result.get("pac_detection", {})
-        pac_adjustment = self._calculate_pac_adjustment(pac_detection)
+          Result is in [0.0, 1.0]. Threshold = 0.98.
+          Requires_escalation = confidence < 0.98
+        """
+        logger.info("[HUMAN-IN-LOOP] Calculating Phase 3 hardened confidence")
 
-        evidence_summary = evaluation_result.get("evidence_summary", {})
-        evidence_adjustment = self._calculate_evidence_adjustment(evidence_summary)
+        # Extract PAC from evaluation result (set by assignment engine)
+        pac = evaluation_result.get("pac", {})
+        proof        = float(pac.get("proof",        0))
+        architecture = float(pac.get("architecture", 0))
+        code         = float(pac.get("code",         0))
 
-        consistency_adjustment = self._calculate_consistency_adjustment(
-            evaluation_result, decision_result, supporting_signals
+        # rubric_completeness: fraction of 6 binary rubric criteria that are 1
+        rubric = evaluation_result.get("rubric", {})
+        rubric_sum = (
+            rubric.get("Q_proof",           0) +
+            rubric.get("Q_architecture",    0) +
+            rubric.get("Q_code",            0) +
+            rubric.get("alignment_score",   0) +
+            rubric.get("authenticity_score",0) +
+            rubric.get("effort_score",      0)
         )
+        rubric_completeness = rubric_sum / 6.0  # normalised 0–1
 
-        score_consistency = self._calculate_score_consistency(evaluation_result, decision_result)
-        signal_alignment = self._calculate_signal_alignment(supporting_signals, decision_result)
-        decision_clarity = self._calculate_decision_clarity(decision_result)
-        evidence_strength = self._calculate_evidence_strength(evidence_summary)
-
-        final_confidence = min(1.0, max(0.0,
-            base_confidence + quality_adjustment + pac_adjustment +
-            evidence_adjustment + consistency_adjustment
-        ))
+        # Exact formula — total = 4 components
+        total = 4.0
+        raw_confidence = (proof + architecture + code + rubric_completeness) / total
+        final_confidence = round(min(1.0, max(0.0, raw_confidence)), 4)
 
         requires_escalation = final_confidence < self.confidence_threshold
-        escalation_reasons = self._identify_escalation_reasons(
-            final_confidence, quality_grade, pac_detection, evidence_summary,
-            score_consistency, signal_alignment
-        )
+        escalation_reasons  = []
+        if requires_escalation:
+            escalation_reasons.append("low_confidence")
+        if proof == 0:
+            escalation_reasons.append("no_proof")
+        if architecture == 0:
+            escalation_reasons.append("no_architecture")
+        if code == 0:
+            escalation_reasons.append("no_code")
+        if rubric_completeness < 0.5:
+            escalation_reasons.append("low_rubric_completeness")
 
+        # ConfidenceMetrics fields — fill legacy fields with formula components
         metrics = ConfidenceMetrics(
-            base_confidence=base_confidence,
-            quality_adjustment=quality_adjustment,
-            pac_adjustment=pac_adjustment,
-            evidence_adjustment=evidence_adjustment,
-            consistency_adjustment=consistency_adjustment,
+            base_confidence=raw_confidence,
+            quality_adjustment=0.0,          # not used in hardened formula
+            pac_adjustment=0.0,              # not used in hardened formula
+            evidence_adjustment=0.0,         # not used in hardened formula
+            consistency_adjustment=0.0,      # not used in hardened formula
             final_confidence=final_confidence,
-            score_consistency=score_consistency,
-            signal_alignment=signal_alignment,
-            decision_clarity=decision_clarity,
-            evidence_strength=evidence_strength,
+            score_consistency=proof,
+            signal_alignment=architecture,
+            decision_clarity=code,
+            evidence_strength=rubric_completeness,
             requires_escalation=requires_escalation,
             escalation_reasons=escalation_reasons
         )
 
-        logger.info(f"[HUMAN-IN-LOOP] Confidence: {final_confidence:.3f} (threshold: {self.confidence_threshold})")
+        logger.info(
+            f"[HUMAN-IN-LOOP] Confidence: proof={proof} arch={architecture} "
+            f"code={code} rubric={rubric_completeness:.3f} "
+            f"→ ({proof}+{architecture}+{code}+{rubric_completeness:.3f})/4 "
+            f"= {final_confidence:.4f} (threshold={self.confidence_threshold})"
+        )
         if requires_escalation:
-            logger.warning(f"[HUMAN-IN-LOOP] Escalation required: {', '.join(escalation_reasons)}")
+            logger.warning(f"[HUMAN-IN-LOOP] Escalation: {', '.join(escalation_reasons)}")
 
         return metrics
 
@@ -282,105 +307,6 @@ class HumanInLoopService:
         self.escalation_cases[case_id] = case
         self._save_case(case)
         return case
-
-    def _calculate_quality_adjustment(self, quality_grade: str, quality_rubric: Dict[str, Any]) -> float:
-        base = {"A": 0.1, "B": 0.05, "C": 0.0, "D": -0.1}.get(quality_grade, -0.1)
-        total = quality_rubric.get("total_quality", 0)
-        if total >= 8:
-            base += 0.05
-        elif total <= 2:
-            base -= 0.05
-        return base
-
-    def _calculate_pac_adjustment(self, pac_detection: Dict[str, Any]) -> float:
-        pac_score = pac_detection.get("pac_score", 0)
-        if pac_score >= 5: return 0.08
-        elif pac_score >= 3: return 0.04
-        elif pac_score >= 1: return 0.02
-        return -0.05
-
-    def _calculate_evidence_adjustment(self, evidence_summary: Dict[str, Any]) -> float:
-        ratio = evidence_summary.get("delivery_ratio", 0)
-        missing = evidence_summary.get("missing_features_count", 0)
-        if ratio >= 0.9 and missing == 0: return 0.1
-        elif ratio >= 0.7 and missing <= 2: return 0.05
-        elif ratio >= 0.4: return 0.0
-        return -0.08
-
-    def _calculate_consistency_adjustment(
-        self,
-        evaluation_result: Dict[str, Any],
-        decision_result: Dict[str, Any],
-        supporting_signals: Dict[str, Any]
-    ) -> float:
-        score = decision_result.get("score", 0)
-        decision = decision_result.get("decision", "reject")
-        expected = "approve" if score >= 75 else "conditional" if score >= 50 else "reject"
-        decision_ok = decision == expected
-
-        repo = supporting_signals.get("repository_available", False)
-        fmr = supporting_signals.get("feature_match_ratio", 0)
-        signal_ok = True
-        if score >= 70 and (not repo or fmr < 0.5): signal_ok = False
-        if score <= 30 and repo and fmr >= 0.8: signal_ok = False
-
-        if decision_ok and signal_ok: return 0.05
-        if not decision_ok or not signal_ok: return -0.08
-        return 0.0
-
-    def _calculate_score_consistency(self, evaluation_result: Dict[str, Any], decision_result: Dict[str, Any]) -> float:
-        diff = abs(evaluation_result.get("score", 0) - decision_result.get("score", 0))
-        if diff <= 5: return 1.0
-        elif diff <= 15: return 0.8
-        elif diff <= 25: return 0.6
-        return 0.4
-
-    def _calculate_signal_alignment(self, supporting_signals: Dict[str, Any], decision_result: Dict[str, Any]) -> float:
-        repo = supporting_signals.get("repository_available", False)
-        fmr = supporting_signals.get("feature_match_ratio", 0)
-        dr = supporting_signals.get("expected_vs_delivered_evidence", {}).get("delivery_ratio", 0)
-        decision = decision_result.get("decision", "reject")
-        if decision == "approve":
-            return 1.0 if (repo and fmr >= 0.7 and dr >= 0.8) else 0.3
-        elif decision == "conditional":
-            return 1.0 if (fmr >= 0.4 and dr >= 0.5) else 0.3
-        return 1.0 if (fmr < 0.6 or dr < 0.6) else 0.3
-
-    def _calculate_decision_clarity(self, decision_result: Dict[str, Any]) -> float:
-        total = decision_result.get("decision_criteria", {}).get("total_criteria_score", 0)
-        if total >= 7 or total <= 2: return 1.0
-        elif total >= 5 or total <= 4: return 0.7
-        return 0.4
-
-    def _calculate_evidence_strength(self, evidence_summary: Dict[str, Any]) -> float:
-        expected = evidence_summary.get("expected_features", 0)
-        delivered = evidence_summary.get("delivered_features", 0)
-        if expected == 0: return 0.5
-        ratio = delivered / expected
-        if ratio >= 0.9: return 1.0
-        elif ratio >= 0.7: return 0.8
-        elif ratio >= 0.5: return 0.6
-        return 0.3
-
-    def _identify_escalation_reasons(
-        self,
-        confidence: float,
-        quality_grade: str,
-        pac_detection: Dict[str, Any],
-        evidence_summary: Dict[str, Any],
-        score_consistency: float,
-        signal_alignment: float
-    ) -> List[str]:
-        reasons = []
-        if confidence < self.confidence_threshold: reasons.append("low_confidence")
-        if score_consistency < 0.7: reasons.append("score_inconsistency")
-        if signal_alignment < 0.5: reasons.append("signal_misalignment")
-        if quality_grade == "D" and pac_detection.get("pac_score", 0) >= 3:
-            reasons.append("conflicting_quality_signals")
-        dr = evidence_summary.get("delivery_ratio", 1.0)
-        if 0.4 <= dr <= 0.6: reasons.append("borderline_delivery")
-        return reasons
-
 
 # Global instance
 human_in_loop = HumanInLoopService()

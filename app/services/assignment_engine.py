@@ -4,28 +4,38 @@ Phase 2: Binary P/A/C detection
 Phase 3: Quality rubric (Q_proof, Q_architecture, Q_code, alignment, authenticity, effort) — all binary 0/1
 Phase 4: Exact scoring formula on 0–10 scale
   final_score = 0.35*completeness + 0.25*quality + 0.20*alignment + 0.10*authenticity + 0.10*effort
+
+BOUNDARY RULES (Phase 1 Lock):
+  - NO task generation (removed — handled by task_selection_engine)
+  - NO adaptive/learning logic
+  - NO heuristic shortcuts
+  - NO parallel scoring paths
+  - evaluate_and_assign() is the ONLY public entry point
 """
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 import logging
-from datetime import datetime
-from ..models.next_task_model import NextTask
-from .decision_rules import DecisionRules
-from .architecture_guard import ArchitectureGuard
 
 logger = logging.getLogger("assignment_engine")
 
+# Boundary lock — no datetime import (prevents non-deterministic IDs)
+# No NextTask, DecisionRules, ArchitectureGuard — task generation removed
 
 class AssignmentEngine:
     """
     SINGLE EVALUATION AUTHORITY.
     Implements the exact Parikshak Phase 2–4 scoring protocol.
-    No heuristics. No parallel paths. Deterministic.
+    No heuristics. No parallel paths. No task generation. Deterministic.
+
+    BOUNDARY RULES:
+    - evaluate_and_assign() is the ONLY public method
+    - Returns score, status, PAC, rubric, score_breakdown ONLY
+    - Task selection is delegated to task_selection_engine (Phase 2)
+    - No datetime.now() calls — all IDs come from Niyantran trace_id
     """
 
     def __init__(self):
         self.authority_level = "CANONICAL_PRIMARY"
-        self.rules = DecisionRules()
-        self.guard = ArchitectureGuard()
+        # No rules/guard — task generation removed from this engine
 
     # ── Public entry point ────────────────────────────────────────────────
 
@@ -61,18 +71,15 @@ class AssignmentEngine:
         }
 
         # Component scores (kept for downstream/UI compatibility, derived from rubric)
-        title_score   = self._title_score_compat(supporting_signals)
-        desc_score    = self._desc_score_compat(supporting_signals)
-        repo_score    = self._repo_score_compat(supporting_signals)
-
-        # Next task generation
-        next_task = self._generate_next_task(score_10, status, supporting_signals)
+        title_score = self._title_score_compat(supporting_signals)
+        desc_score  = self._desc_score_compat(supporting_signals)
+        repo_score  = self._repo_score_compat(supporting_signals)
 
         result = {
             # Core
-            "score": score_100,
-            "score_10": round(score_10, 2),
-            "status": status,
+            "score":            score_100,
+            "score_10":         round(score_10, 2),
+            "status":           status,
             "readiness_percent": score_100,
 
             # Phase 2 — P/A/C
@@ -85,21 +92,19 @@ class AssignmentEngine:
             "score_breakdown": score_breakdown,
 
             # Component scores (UI compat)
-            "title_score": title_score,
+            "title_score":       title_score,
             "description_score": desc_score,
-            "repository_score": repo_score,
+            "repository_score":  repo_score,
 
             # Evidence
             "evidence_summary": evidence_summary,
 
             # Authority markers
-            "canonical_authority": True,
-            "evaluation_basis": "parikshak_assignment_engine",
-            "intelligence_source": "parikshak_canonical_engine",
-            "evaluation_timestamp": datetime.now().isoformat(),
-
-            # Next task
-            **next_task
+            "canonical_authority":  True,
+            "evaluation_basis":     "parikshak_assignment_engine",
+            "intelligence_source":  "parikshak_canonical_engine",
+            # NOTE: no evaluation_timestamp — timestamps are non-deterministic
+            # Caller must attach trace_id from Niyantran
         }
 
         logger.info(
@@ -295,58 +300,6 @@ class AssignmentEngine:
         elif score_10 >= 4.0:
             return "borderline"
         return "fail"
-
-    # ── Next task generation ──────────────────────────────────────────────
-
-    def _generate_next_task(
-        self,
-        score_10: float,
-        status: str,
-        signals: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        missing    = signals.get("missing_features", [])
-        indicators = signals.get("failure_indicators", [])
-
-        review_output = {
-            "score": round(score_10 * 10),
-            "status": status,
-            "missing": missing,
-            "failure_reasons": indicators
-        }
-
-        task_data = self.rules.decide(review_output)
-
-        if missing:
-            task_data["objective"] = f"Address missing: {', '.join(missing[:2])}"
-        if "repository_not_found" in str(indicators):
-            task_data["focus_area"] = "Implementation Creation"
-        elif "low_feature_match_ratio" in str(indicators):
-            task_data["focus_area"] = "Requirement Alignment"
-        elif missing:
-            task_data["focus_area"] = "Feature Implementation"
-
-        task_data = self.guard.ensure_valid(task_data, review_output)
-
-        next_task_obj = NextTask(
-            title=task_data.get("title", "Assignment Task"),
-            objective=task_data.get("objective", "Complete assigned task"),
-            focus_area=task_data.get("focus_area", "general"),
-            difficulty=task_data.get("difficulty", "beginner"),
-            expected_deliverables=task_data.get("expected_deliverables", "Complete implementation")
-        )
-
-        task_type = "advancement" if status == "pass" else "reinforcement" if status == "borderline" else "correction"
-
-        return {
-            "next_task_id": f"next-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            "task_type": task_type,
-            "title": next_task_obj.title,
-            "objective": next_task_obj.objective,
-            "focus_area": next_task_obj.focus_area,
-            "difficulty": next_task_obj.difficulty,
-            "reason": f"Score {score_10:.1f}/10 → {status}",
-            "evidence_driven": True
-        }
 
     # ── UI-compat component scores (0–20/40/40 scale) ────────────────────
 
