@@ -1,116 +1,216 @@
-# Deterministic Evaluation Engine with Assignment-First Authority, Signal Enrichment and Strict Validation Pipeline
+# Parikshak — Sovereign Evaluation Authority
 
-## 1. Overview
-The Task Review Agent is a production-grade evaluation system designed for rigorous assessment of engineering tasks. It merges multiple evaluation dimensions into a single unified evaluation pipeline, ensuring that all submissions are assessed with absolute consistency, strict validation, and contract-compliant output. The system strictly eliminates parallel evaluation paths, guaranteeing that a single sequential pipeline dictates the final outcome.
+**Version**: 2.0.0 | **Status**: Production-Ready | **Protocol**: Boundary-Locked Deterministic
 
-## 2. Core Objective
-The primary objective of this system is to evaluate engineering task submissions deterministically. By strictly enforcing Assignment-first evaluation, the system ensures that functional accuracy and core requirement completeness are the absolute authorities on whether a submission passes or fails. Signals cannot override assignment, meaning they are deliberately constrained to refine feedback rather than dictate core outcomes, resulting in highly reliable and reproducible evaluations using a Deterministic pipeline where Same input produces same output.
+Parikshak is a fully deterministic, governance-safe engineering task evaluation engine. It enforces strict architectural boundaries, eliminates all parallel scoring paths, and guarantees that identical inputs always produce identical outputs.
 
-## 3. Evaluation Hierarchy
-The evaluation pipeline operates strictly under the following hierarchical authority:
+---
 
-1. **Assignment Engine (AUTHORITATIVE)**
-   - Responsible for assessing functional accuracy, completeness, and identifying missing requirements.
-   - Outputs the foundational status (PASS/FAIL/BORDERLINE).
-   - This evaluation dictates the ultimate result; it cannot be overruled.
+## Architecture
 
-2. **Signal Engine (SUPPORTING)**
-   - Responsible for analyzing repository signals, structural code quality, and documentation signals.
-   - Provides granular context to enrich the final feedback report.
+```
+Submission Input
+    │
+    ▼
+[Step 0] REVIEW_PACKET Hard Gate       ← review_packet_parser.py
+    │  Missing / malformed → HARD REJECT (score = 0)
+    ▼
+[Step 1] Registry Validation           ← validator.py
+    │  Invalid module_id / schema_version → REJECT
+    ▼
+[Step 2] Signal Collection             ← signal_engine.py  (SUPPORTING ONLY)
+    │  Repo signals, feature match, title/desc signals
+    ▼
+[Step 2.5] Domain Routing              ← domain_router.py
+    │  Detects: backend / frontend / infra / fullstack / ml
+    ▼
+[Step 3] Assignment Engine             ← assignment_engine.py  (SINGLE AUTHORITY)
+    │  Phase 2: Binary P/A/C  {proof:0/1, architecture:0/1, code:0/1}
+    │  Phase 3: Binary rubric (Q_proof, Q_arch, Q_code, alignment, auth, effort)
+    │  Phase 4: Exact formula → score 0–10
+    │           0.35×completeness + 0.25×quality + 0.20×alignment
+    │           + 0.10×authenticity + 0.10×effort
+    ▼
+[Step 4] Decision Engine               ← production_decision_engine.py
+    │  score ≥ 6 → APPROVED  |  score < 6 → REJECTED
+    │  Generates: strengths, failures, root_cause, learning_feedback, next_direction
+    ▼
+[Step 5] Human-in-Loop                 ← human_in_loop.py
+    │  confidence = (proof + architecture + code + rubric_completeness) / 4
+    │  confidence < 0.98 → escalation case created + persisted to disk
+    ▼
+[Step 6] Validation Gate               ← shraddha_validation.py  (FINAL WRAPPER)
+    │  Contract enforcement, type checking, field correction
+    ▼
+[Step 7] Bucket Logging                ← bucket_integration.py  (MANDATORY)
+    │  Writes: type, candidate_id, task_id, score, decision,
+    │          review_summary, next_task, trace_id
+    │  Allowed reads: same_task_history, escalation_cases only
+    ▼
+[Step 8] Task Selection                ← task_selection_engine.py
+         Deterministic selection from Niyantran task graph
+         NO task generation — selection only
+```
 
-3. **Validation Layer (FINAL WRAPPER)**
-   - Validates the merged output against the internal system schema.
-   - Enforces strict JSON contract validation to ensure structural integrity and deterministic output.
+---
 
-## 4. Execution Pipeline
-The system enforces a heavily orchestrated, step-by-step sequential flow:
+## Scoring Formula
 
-1. `assignment_engine()`: Ingests the raw submission and performs the authoritative evaluation. Generates the base status and core scores.
-2. `signal_engine()`: Analyzes secondary characteristics of the repository and code. Determines supportive metrics like structural quality and documentation presence.
-3. `merge_logic()`: Combines the outputs of the assignment and signal engines using explicit, deterministic rules ensuring the assignment remains authoritative.
-4. `validator()`: Passes the merged evaluation payload through a strict contract enforcer to guarantee adherence to the exact JSON output specifications.
+```
+final_score (0–10) =
+  0.35 × completeness   +   (delivery_ratio from repo signals)
+  0.25 × quality        +   (Q_proof + Q_arch + Q_code) / 3
+  0.20 × alignment      +   (binary: delivery ≥ 0.6 and missing ≤ 3)
+  0.10 × authenticity   +   (binary: repo present and description ≥ 50 words)
+  0.10 × effort             (binary: description ≥ 80 words and README present)
 
-## 5. Deterministic Guarantees
-This evaluation engine is mathematically predictable. The system provides absolute deterministic guarantees:
-- **Same input produces same output**: identical submissions, titles, and repository states will universally yield identical scores and statuses regardless of when they are run.
-- **Assignment-first evaluation**: No supporting signal can independently alter the base outcome generated by the Assignment Engine.
-- **No parallel evaluation paths**: The pipeline is strictly linear. Every submission must pass identically through the `Orchestrator → Assignment → Signal → Merge → Validation` sequence.
-- **Deterministic pipeline**: Randomness, race conditions, and divergent heuristic paths are entirely eliminated.
+Caps:
+  Q_proof = 0    → cap at 4.0
+  Q_code  = 0    → cap at 5.0
+  alignment = 0  → cap at 6.0
 
-## 6. Merge Logic Rules
-The system compiles the final evaluation heavily favoring the Authoritative Assignment Engine. The merge logic abides by these immutable bullet rules:
-- The base status (PASS/FAIL) determined by the Assignment Engine is absolute.
-- Signals cannot override assignment. If `Assignment = FAIL`, then `Final MUST be FAIL`, regardless of perfect repository or structural signals.
-- Supporting signals from the Signal Engine can *refine* the total score algorithmically (e.g., adding bonus points or minor deductions).
-- Supporting signals strictly serve to enrich the `improvement_hints` and `failure_reasons` arrays.
-- Any conflicting data between engines is resolved in favor of the Assignment Engine.
+Decision:
+  score ≥ 6.0 → APPROVED (advancement)
+  score 4–5.9 → REJECTED (reinforcement)
+  score < 4.0 → REJECTED (correction)
+```
 
-## 7. System Architecture
-The Task Review Agent is divided into modular, highly cohesive services:
-- **Submission API**: A FastAPI-based ingress layer that accepts task metadata and URLs.
-- **Review Orchestrator**: The central controller dictating the sequence of operations.
-- **Evaluation Engines**: Formatted as pure functions executing the `assignment` and `signal` rulesets.
-- **Data Persistence**: A stateful storage mechanism bridging historical submissions, reviews, and subsequent task assignments.
-- **Contract Validators**: Pydantic schemas placed at the boundaries of the orchestrator to sanitize and enforce rigorous types.
+---
 
-## 8. Orchestrator Flow
-The orchestration is explicitly defined and strictly monitored:
-1. `submission`: The endpoint receives the request and validates raw input parameters.
-2. `review_orchestrator`: Takes control of the submission and queues it for the evaluation matrix.
-3. `evaluation`: The orchestrator calls the Assignment Engine, then the Signal Engine, and routes them into the Merge Logic.
-4. `validation`: The merged output is parsed through the Validation Layer to purge missing/extra fields.
-5. `next_task`: Once validated, the system generates the subsequent assignment block and securely stores the transaction.
+## Confidence Formula (Phase 3 — Hardened)
 
-## 9. Validation & Contract Enforcement
-The Validation Layer is the final gatekeeper acting on the output. It operates under strict JSON contract validation to ensure that no malformed data reaches the client. It guarantees:
-- Explicit inclusion of all required keys (`score`, `status`, `readiness_percent`, `failure_reasons`, etc.).
-- Complete removal of arbitrary or hallucinated fields.
-- Type enforcement (e.g., `score` must be an integer, `failure_reasons` must be an array of strings).
+```
+confidence = (proof + architecture + code + rubric_completeness) / 4
 
-## 10. Testing Strategy
-The system's reliability is proven mathematically via hybrid test cases specifically designed to stress-test determinism and hierarchy:
-- **Consistency Tests**: Ensuring that submitting identical valid datasets continually returns the same status and score.
-- **Hierarchy Tests**: Forcing high Signal Engine scores on a failing Assignment Engine base to prove that signals cannot override assignment failures.
-- **Schema Rejection**: Intentionally injecting malformed data to verify that strict JSON contract validations block invalid schemas.
-- **End-to-End Edge Cases**: Validating that the entire pipeline gracefully handles boundary constraints (e.g. absent repo links or unusual task descriptions).
+Where:
+  proof               = pac.proof          (0 or 1)
+  architecture        = pac.architecture   (0 or 1)
+  code                = pac.code           (0 or 1)
+  rubric_completeness = rubric_sum / 6     (0.0–1.0)
 
-## 11. Deployment Readiness
-This system is production-ready for deployment with zero additional orchestration overhead. 
-- Stateless processing logic ensuring it scales horizontally without race conditions.
-- Standardized environment variables for localized frontend cross-origin handling (`ALLOWED_ORIGINS`).
-- Embedded health checks to continuously monitor the orchestrator's integrity.
+confidence < 0.98 → escalation triggered
+```
 
-## 12. Deliverables
-- Fully functional Deterministic Hybrid Evaluation System.
-- API endpoints for Submissions, Task History, and Next Task mapping.
-- React-built frontend dashboard strictly conforming to the backend contracts.
-- Isolated Python engine services (Assignment, Signal, Orchestrator, Validator).
+---
 
-## 13. Success Criteria
-The deployment is considered successful when it mathematically proves that:
-1. The Assignment Engine successfully governs the pass/fail state for all incoming tasks.
-2. The Validation Layer eliminates 100% of out-of-contract outputs.
-3. The evaluation remains entirely deterministic across infinite identical calls.
+## Boundary Rules
 
-## 14. Tech Stack
-- **Backend Core**: Python 3.11, FastAPI, Pydantic (Strict Schema Enforcement)
-- **Frontend Architecture**: React, TailwindCSS, Axios
-- **Deployment**: Render Infrastructures (Web Services & Static Hosting)
+| Rule | Enforcement |
+|------|-------------|
+| Assignment Engine = ONLY scoring authority | No parallel scoring paths exist |
+| No task generation | `task_selection_engine` selects from Niyantran graph only |
+| No adaptive / RL logic | All scoring is purely mathematical |
+| trace_id must come from Niyantran | Missing trace_id → REJECT at intake |
+| Bucket write is mandatory | Every evaluation logged, no exceptions |
+| Bucket reads restricted | Only `same_task_history` and `escalation_cases` |
+| REVIEW_PACKET is a hard gate | Missing or malformed → score 0, no evaluation |
 
-## 15. Conclusion
-By rigidly enforcing assignment-first evaluation, eliminating parallel validation paths, and guaranteeing that the same input produces the same output under a strict JSON contract, this Task Review Agent serves as a fully predictable, authoritative evaluation pipeline.
+---
 
-## 16. Explicit Engine Functions
+## API Endpoints
 
-- `assignment_engine()`
-- `signal_engine()`
-- `merge_logic()`
-- `review_orchestrator()`
-- `validator()`
+### Lifecycle
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/lifecycle/submit` | Submit task for evaluation |
+| GET | `/api/v1/lifecycle/history` | All submission history |
+| GET | `/api/v1/lifecycle/review/{id}` | Review result by submission ID |
+| GET | `/api/v1/lifecycle/next/{id}` | Next task by submission ID |
 
-## 17. Engine Mapping
+### Production (Niyantran)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/production/niyantran/submit` | Accept task from Niyantran |
+| GET | `/api/v1/production/niyantran/health` | Niyantran connection health |
+| GET | `/api/v1/production/bucket/logs` | Recent evaluation logs |
+| GET | `/api/v1/production/bucket/stats` | Bucket statistics |
+| GET | `/api/v1/production/bucket/evaluation/{trace_id}` | Evaluation by trace_id |
+| GET | `/api/v1/production/human-review/pending` | Pending escalations |
+| POST | `/api/v1/production/human-review/override` | Apply human override |
+| GET | `/api/v1/production/system/production-status` | Full system status |
+| POST | `/api/v1/production/test/determinism` | Run determinism test |
 
-- assignment_engine.py → canonical_intelligence.py
-- signal_engine.py → signal_collector.py
-- review_orchestrator.py → product_orchestrator.py
-- validator.py → registry_validator.py
+### TTS (Vaani)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/tts/speak` | Generate speech audio |
+| GET | `/api/v1/tts/prosody` | Get prosody hint |
+| GET | `/api/v1/tts/languages` | List supported languages and tones |
+
+---
+
+## Running Locally
+
+**Backend**
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+API docs: `http://localhost:8000/docs`
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm start
+```
+UI: `http://localhost:3000`
+
+**Environment** — copy `.env.example` to `.env` and set:
+```
+GITHUB_TOKEN=your_token_here
+GROQ_API_KEY=your_key_here
+ALLOWED_ORIGINS=["http://localhost:3000"]
+```
+
+---
+
+## Determinism Proof
+
+Run the full test suite:
+```bash
+python tests/test_determinism_proof.py
+```
+
+| Test | Scenario | Result |
+|------|----------|--------|
+| TC-1 | Identical input × 3 runs | score=10.0 × 3 identical |
+| TC-2 | Missing REVIEW_PACKET | HARD_GATE_FAILURE |
+| TC-3 | Partial submission (no repo) | score=0.0, 3 caps applied |
+| TC-4 | Full valid submission | score=10.0, APPROVED, confidence=1.0 |
+| TC-5 | Failure case (empty repo) | proof_cap applied, escalation=True |
+| TC-6 | Parser parse-only check | no score/status/decision in output |
+| TC-7 | Task selection × 3 runs | NT-ADV-B-001 × 3 identical |
+
+**7/7 PASSED — SYSTEM IS DETERMINISTIC**
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.11, FastAPI, Pydantic v2 |
+| Frontend | React 18, TailwindCSS, Axios |
+| TTS | VaaniTTS (gTTS primary, pyttsx3 fallback) |
+| Storage | Local JSONL (bucket_logs, escalations) |
+| Deployment | Render (backend web service + static frontend) |
+
+---
+
+## Engine File Map
+
+| Engine | File |
+|--------|------|
+| Assignment Engine (scoring authority) | `app/services/assignment_engine.py` |
+| Signal Engine (supporting only) | `app/services/signal_engine.py` |
+| Decision Engine (Phase 5) | `app/services/production_decision_engine.py` |
+| Task Selection (Niyantran graph) | `app/services/task_selection_engine.py` |
+| Review Packet Parser (hard gate) | `app/services/review_packet_parser.py` |
+| Domain Router | `app/services/domain_router.py` |
+| Human-in-Loop | `app/services/human_in_loop.py` |
+| Bucket Integration | `app/services/bucket_integration.py` |
+| Niyantran Connection | `app/services/niyantran_connection.py` |
+| Validation Gate | `app/services/shraddha_validation.py` |
+| Registry Validator | `app/services/validator.py` |
+| Final Convergence Orchestrator | `app/services/final_convergence.py` |
