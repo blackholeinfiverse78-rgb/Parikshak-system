@@ -12,6 +12,7 @@ from .final_convergence import final_convergence
 from .production_decision_engine import production_decision_engine
 from .bucket_integration import bucket_integration
 from .task_selection_engine import task_selection_engine
+from .mandala_mapper import mandala_mapper
 
 logger = logging.getLogger("niyantran_connection")
 
@@ -33,6 +34,7 @@ class NiyantranTask:
     priority: str = "normal"
     deadline: Optional[str] = None
     trace_id: str = ""  # Phase 5: must come from Niyantran
+    product_context: Optional[Dict[str, Any]] = None  # Phase 3: injected by Mandala Mapper
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "NiyantranTask":
@@ -44,6 +46,11 @@ class NiyantranTask:
                 f"(got '{trace_id}', min {_TRACE_ID_MIN_LEN} chars). "
                 "trace_id must come from Niyantran."
             )
+        # Phase 3: map task to BHIV product context via Mandala Mapper
+        product_context = mandala_mapper.map_task_to_context(
+            data.get("task_title", ""),
+            data.get("task_description", "")
+        )
         return cls(
             task_id=data.get("task_id", ""),
             task_title=data.get("task_title", ""),
@@ -55,7 +62,8 @@ class NiyantranTask:
             pdf_text=data.get("pdf_text", ""),
             priority=data.get("priority", "normal"),
             deadline=data.get("deadline"),
-            trace_id=trace_id
+            trace_id=trace_id,
+            product_context=product_context
         )
 
 @dataclass
@@ -113,9 +121,15 @@ class NiyantranConnectionService:
         logger.info(f"[NIYANTRAN] Processing task from Niyantran: {task_data.get('task_title', 'Unknown')[:50]}...")
         
         try:
-            # Step 1: Parse Niyantran task — enforces trace_id
+            # Step 1: Parse Niyantran task — enforces trace_id + injects context
             niyantran_task = NiyantranTask.from_dict(task_data)
-            trace_id = niyantran_task.trace_id  # Phase 5: use Niyantran trace_id
+            trace_id = niyantran_task.trace_id
+            product_context = niyantran_task.product_context  # Phase 3
+            logger.info(
+                f"[NIYANTRAN] Context: product={product_context.get('product')} "
+                f"layer={product_context.get('layer')} "
+                f"confidence={product_context.get('mapping_confidence')}"
+            )
 
             # Step 2: Execute full evaluation pipeline
             evaluation_result = self._execute_evaluation_pipeline(niyantran_task)
@@ -127,34 +141,35 @@ class NiyantranConnectionService:
                 evaluation_result.get("packet_data")
             )
 
-            # Step 4: Select next task from Niyantran task graph (Phase 2)
+            # Step 4: Context-aware task selection (Phase 5)
             score_10   = evaluation_result["evaluation"].get("score_10", 0)
             decision   = decision_result.get("decision", "REJECTED")
             difficulty = evaluation_result["evaluation"].get("difficulty", "beginner")
             next_task_result = task_selection_engine.select_next_task(
                 score_10=score_10,
                 decision=decision,
-                current_difficulty=difficulty
+                current_difficulty=difficulty,
+                product_context=product_context
             )
 
-            # Step 5: Log to bucket with Niyantran trace_id (Phase 5)
+            # Step 5: Log to bucket with Niyantran trace_id + context
             bucket_integration.log_evaluation(
                 evaluation_result["evaluation"],
                 evaluation_result["supporting_signals"],
                 decision_result,
                 next_task_result,
-                task_data,
-                trace_id=trace_id  # always from Niyantran
+                {**task_data, "product_context": product_context},
+                trace_id=trace_id
             )
-            
+
             # Step 6: Create Niyantran response
             processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
-            
+
             response = NiyantranResponse(
                 task_id=niyantran_task.task_id,
                 trace_id=trace_id,
                 review=self._format_review_for_niyantran(evaluation_result["evaluation"], decision_result),
-                next_task=self._format_next_task_for_niyantran(next_task_result, decision_result),
+                next_task=self._format_next_task_for_niyantran(next_task_result, decision_result, product_context),
                 processing_time_ms=processing_time,
                 timestamp=datetime.now().isoformat(),
                 status="completed"
@@ -294,35 +309,31 @@ class NiyantranConnectionService:
         }
     
     def _format_next_task_for_niyantran(
-        self, 
-        next_task_result: Dict[str, Any], 
-        decision_result: Dict[str, Any]
+        self,
+        next_task_result: Dict[str, Any],
+        decision_result: Dict[str, Any],
+        product_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Format next task for Niyantran consumption"""
-        
+        """Format next task for Niyantran — includes product context."""
         return {
-            # Task identification
-            "task_id": next_task_result.get("next_task_id"),
-            "task_type": next_task_result.get("task_type"),
-            "parent_task_id": next_task_result.get("parent_task_id"),
-            
-            # Task details
-            "title": next_task_result.get("title"),
-            "objective": next_task_result.get("objective"),
-            "focus_area": next_task_result.get("focus_area"),
-            "difficulty": next_task_result.get("difficulty"),
-            "reason": next_task_result.get("reason"),
-            
-            # Assignment details
-            "assigned_to": next_task_result.get("assigned_to"),
-            "priority": next_task_result.get("priority", "normal"),
-            "confidence": next_task_result.get("confidence"),
-            "quality_grade": next_task_result.get("quality_grade"),
-            
-            # Context
+            "task_id":            next_task_result.get("next_task_id"),
+            "task_type":          next_task_result.get("task_type"),
+            "title":              next_task_result.get("title"),
+            "difficulty":         next_task_result.get("difficulty"),
+            "selection_reason":   next_task_result.get("selection_reason"),
+            "source":             next_task_result.get("source"),
+            "decision_band":      next_task_result.get("decision_band"),
+            "difficulty_band":    next_task_result.get("difficulty_band"),
+            # Phase 5: context-aware fields
+            "product":            next_task_result.get("product"),
+            "layer":              next_task_result.get("layer"),
+            "context_source":     next_task_result.get("context_source"),
+            # Decision context
             "derived_from_decision": decision_result.get("decision"),
             "approval_threshold_met": decision_result.get("decision_criteria", {}).get("approval_threshold_met", False),
-            "evidence_driven": True
+            "evidence_driven":    True,
+            # Product context passthrough
+            "product_context":    product_context or {},
         }
     
     def health_check(self) -> Dict[str, Any]:

@@ -1,15 +1,16 @@
 """
-Parikshak Task Selection Engine — Phase 2
+Parikshak Task Selection Engine — Phase 2 + Phase 5
 Deterministic next-task selection from Niyantran task graph.
+Phase 5: context-aware selection using product + layer from Mandala Mapper.
 
 BOUNDARY RULES:
   - NO task generation — only selection from existing graph
-  - Input:  score (0–10), decision (APPROVED/REJECTED), difficulty
+  - Input:  score (0–10), decision, difficulty, product_context (optional)
   - Output: next_task_id, selection_reason, source=niyantran_task_graph
   - Same input ALWAYS produces same output (deterministic)
-  - Task graph is loaded from Niyantran — never mutated here
+  - product_context enriches selection_reason but does NOT change graph keys
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 
 logger = logging.getLogger("task_selection_engine")
@@ -81,27 +82,31 @@ class TaskSelectionEngine:
         self,
         score_10: float,
         decision: str,
-        current_difficulty: str = "beginner"
+        current_difficulty: str = "beginner",
+        product_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Select next task deterministically.
+        Phase 5: product_context enriches selection_reason and filters
+        allowed_next_tasks from the product registry when available.
 
         Args:
             score_10:           Evaluation score 0–10
             decision:           "APPROVED" or "REJECTED"
             current_difficulty: Current task difficulty level
+            product_context:    Optional context from Mandala Mapper
 
         Returns:
-            {next_task_id, title, task_type, difficulty, selection_reason, source}
+            {next_task_id, title, task_type, difficulty, selection_reason,
+             source, product, layer, context_source}
         """
-        decision_band    = self._map_decision_band(score_10, decision)
-        difficulty_band  = self._normalise_difficulty(current_difficulty)
-        selection_key    = (decision_band, difficulty_band)
+        decision_band   = self._map_decision_band(score_10, decision)
+        difficulty_band = self._normalise_difficulty(current_difficulty)
+        selection_key   = (decision_band, difficulty_band)
 
         task_ids = NIYANTRAN_TASK_GRAPH.get(selection_key)
 
         if not task_ids:
-            # Fallback: use beginner correction — always exists
             fallback_key = ("rejected_fail", "beginner")
             task_ids = NIYANTRAN_TASK_GRAPH[fallback_key]
             selection_reason = (
@@ -115,24 +120,63 @@ class TaskSelectionEngine:
                 f"graph_key={selection_key}"
             )
 
-        # Always take first task in list (deterministic — no randomness)
-        next_task_id = task_ids[0]
-        metadata     = TASK_METADATA.get(next_task_id, {})
+        # Phase 5: if product context provides allowed_next_tasks,
+        # prefer the first task_id that appears in both lists.
+        # Falls back to graph-first if no intersection.
+        product = "unknown"
+        layer   = "unknown"
+        context_source = "graph_only"
+
+        if product_context:
+            product = product_context.get("product", "unknown")
+            layer   = product_context.get("layer", "unknown")
+            allowed = product_context.get("allowed_next_tasks", [])
+            if allowed:
+                # Find first task_id in graph list that is also in product's allowed list
+                context_match = next(
+                    (tid for tid in task_ids if tid in allowed), None
+                )
+                if context_match:
+                    next_task_id   = context_match
+                    context_source = "product_context"
+                    selection_reason += (
+                        f" | product={product} layer={layer} "
+                        f"context_match={context_match}"
+                    )
+                else:
+                    # No intersection — use graph-first (deterministic fallback)
+                    next_task_id   = task_ids[0]
+                    context_source = "graph_fallback"
+                    selection_reason += (
+                        f" | product={product} layer={layer} "
+                        f"no_context_match→graph_first"
+                    )
+            else:
+                next_task_id = task_ids[0]
+        else:
+            next_task_id = task_ids[0]
+
+        metadata = TASK_METADATA.get(next_task_id, {})
 
         logger.info(
-            f"[TASK SELECTION] key={selection_key} → {next_task_id} "
-            f"({metadata.get('type', 'unknown')})"
+            f"[TASK SELECTION] key={selection_key} product={product} "
+            f"→ {next_task_id} ({metadata.get('type', 'unknown')}) "
+            f"context_source={context_source}"
         )
 
         return {
-            "next_task_id":      next_task_id,
-            "title":             metadata.get("title", "Task Assignment"),
-            "task_type":         metadata.get("type", "correction"),
-            "difficulty":        metadata.get("difficulty", "beginner"),
-            "selection_reason":  selection_reason,
-            "source":            self.SOURCE,
-            "decision_band":     decision_band,
-            "difficulty_band":   difficulty_band,
+            "next_task_id":     next_task_id,
+            "title":            metadata.get("title", "Task Assignment"),
+            "task_type":        metadata.get("type", "correction"),
+            "difficulty":       metadata.get("difficulty", "beginner"),
+            "selection_reason": selection_reason,
+            "source":           self.SOURCE,
+            "decision_band":    decision_band,
+            "difficulty_band":  difficulty_band,
+            # Phase 5 context fields
+            "product":          product,
+            "layer":            layer,
+            "context_source":   context_source,
         }
 
     def get_task_metadata(self, task_id: str) -> Optional[Dict[str, str]]:
