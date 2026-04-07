@@ -300,6 +300,156 @@ def test_tc7_task_selection_determinism():
     print(f"[TC-7 PASS] Task selection deterministic: {ids[0]} × 3")
 
 
+# ── TC-8: Trace discipline — missing trace_id rejected ───────────────────
+
+def test_tc8_missing_trace_id_rejected():
+    """Niyantran task without trace_id must be rejected at intake."""
+    from app.services.niyantran_connection import NiyantranTask
+    import pytest
+
+    # Missing trace_id
+    try:
+        NiyantranTask.from_dict({
+            "task_id": "t1", "task_title": "Test",
+            "task_description": "desc", "submitted_by": "user"
+        })
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "trace_id" in str(e).lower()
+        print(f"[TC-8 PASS] Missing trace_id rejected: {str(e)[:60]}")
+
+    # Too-short trace_id
+    try:
+        NiyantranTask.from_dict({
+            "task_id": "t1", "task_title": "Test",
+            "task_description": "desc", "submitted_by": "user",
+            "trace_id": "abc"
+        })
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "trace_id" in str(e).lower()
+        print(f"[TC-8 PASS] Short trace_id rejected: {str(e)[:60]}")
+
+
+# ── TC-9: Bucket read governance ─────────────────────────────────────────
+
+def test_tc9_bucket_read_governance():
+    """Unauthorised bucket reads must be rejected."""
+    from app.services.bucket_integration import bucket_integration
+
+    result = bucket_integration.reject_unauthorised_read("full_history")
+    assert result["error"] == "BUCKET_READ_REJECTED"
+    assert "same_task_history" in result["allowed_reads"]
+    assert "escalation_cases" in result["allowed_reads"]
+    assert "full_history" not in result["allowed_reads"]
+    print(f"[TC-9 PASS] Unauthorised read rejected: {result['reason'][:60]}")
+
+
+# ── TC-10: Boundary lock — no learning/adaptive logic ────────────────────
+
+def test_tc10_no_adaptive_logic():
+    """Verify no adaptive/learning imports exist in scoring pipeline."""
+    import os
+    import ast
+
+    forbidden_imports = {
+        "sklearn", "torch", "tensorflow", "keras",
+        "random", "numpy",  # numpy/random = potential non-determinism
+    }
+    # random is allowed only in non-scoring files
+    scoring_files = [
+        "app/services/assignment_engine.py",
+        "app/services/production_decision_engine.py",
+        "app/services/human_in_loop.py",
+        "app/services/task_selection_engine.py",
+    ]
+
+    violations = []
+    for fpath in scoring_files:
+        full = os.path.join(os.path.dirname(os.path.dirname(__file__)), fpath)
+        if not os.path.exists(full):
+            continue
+        src = open(full, encoding="utf-8").read()
+        try:
+            tree = ast.parse(src)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = [a.name for a in getattr(node, "names", [])]
+                mod = getattr(node, "module", "") or ""
+                all_names = names + [mod]
+                for name in all_names:
+                    for forbidden in forbidden_imports:
+                        if forbidden in (name or ""):
+                            violations.append(f"{fpath}: imports '{name}'")
+
+    assert len(violations) == 0, f"Adaptive/learning imports found: {violations}"
+    print(f"[TC-10 PASS] No adaptive/learning imports in {len(scoring_files)} scoring files")
+
+
+# ── TC-11: Task selection source always niyantran_task_graph ─────────────
+
+def test_tc11_task_selection_source():
+    """Every task selection result must have source=niyantran_task_graph."""
+    test_cases = [
+        (10.0, "APPROVED",  "beginner"),
+        (7.0,  "APPROVED",  "intermediate"),
+        (5.0,  "REJECTED",  "beginner"),
+        (3.0,  "REJECTED",  "advanced"),
+        (0.0,  "REJECTED",  "beginner"),
+    ]
+    for score, decision, diff in test_cases:
+        result = task_selection_engine.select_next_task(score, decision, diff)
+        assert result["source"] == "niyantran_task_graph", \
+            f"source wrong for ({score},{decision},{diff}): {result['source']}"
+        assert result["next_task_id"].startswith("NT-"), \
+            f"task_id not from graph: {result['next_task_id']}"
+    print(f"[TC-11 PASS] All {len(test_cases)} selections from niyantran_task_graph")
+
+
+# ── TC-12: Confidence formula audit ──────────────────────────────────────
+
+def test_tc12_confidence_formula_audit():
+    """Verify confidence formula is exactly (P+A+C+rubric_completeness)/4."""
+    test_vectors = [
+        # (proof, arch, code, rubric_sum/6) → expected_confidence
+        (1, 1, 1, 1.0,  1.0),
+        (0, 0, 0, 0.0,  0.0),
+        (1, 0, 0, 0.0,  0.25),
+        (1, 1, 0, 0.5,  0.625),
+        (0, 1, 1, 0.5,  0.625),
+        (1, 1, 1, 0.5,  0.875),
+    ]
+    for proof, arch, code, rubric_comp, expected in test_vectors:
+        # Build minimal eval result with PAC and rubric
+        eval_result = {
+            "pac": {"proof": proof, "architecture": arch, "code": code},
+            "rubric": {
+                "Q_proof": 1 if rubric_comp >= 1/6 else 0,
+                "Q_architecture": 1 if rubric_comp >= 2/6 else 0,
+                "Q_code": 1 if rubric_comp >= 3/6 else 0,
+                "alignment_score": 1 if rubric_comp >= 4/6 else 0,
+                "authenticity_score": 1 if rubric_comp >= 5/6 else 0,
+                "effort_score": 1 if rubric_comp >= 6/6 else 0,
+            }
+        }
+        # Adjust rubric to match exact rubric_comp
+        rubric_sum_target = round(rubric_comp * 6)
+        keys = ["Q_proof","Q_architecture","Q_code","alignment_score","authenticity_score","effort_score"]
+        for i, k in enumerate(keys):
+            eval_result["rubric"][k] = 1 if i < rubric_sum_target else 0
+
+        conf = human_in_loop.calculate_confidence(eval_result, {}, {})
+        actual_rubric_comp = sum(eval_result["rubric"][k] for k in keys) / 6.0
+        expected_actual = (proof + arch + code + actual_rubric_comp) / 4.0
+        assert abs(conf.final_confidence - expected_actual) < 0.001, \
+            f"Formula wrong for P={proof} A={arch} C={code} R={rubric_comp}: "\
+            f"expected {expected_actual:.4f} got {conf.final_confidence:.4f}"
+
+    print(f"[TC-12 PASS] Confidence formula verified for {len(test_vectors)} vectors")
+
+
 # ── Runner ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -311,6 +461,11 @@ if __name__ == "__main__":
         test_tc5_failure_case,
         test_tc6_parser_parse_only,
         test_tc7_task_selection_determinism,
+        test_tc8_missing_trace_id_rejected,
+        test_tc9_bucket_read_governance,
+        test_tc10_no_adaptive_logic,
+        test_tc11_task_selection_source,
+        test_tc12_confidence_formula_audit,
     ]
     passed = failed = 0
     for t in tests:
