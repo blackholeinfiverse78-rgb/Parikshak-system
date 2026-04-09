@@ -224,6 +224,17 @@ class ReviewOrchestrator:
         }
         
         # Step 7: Store next task assignment
+        # Normalise difficulty — NextTaskRecord only accepts beginner/intermediate/advanced
+        _difficulty_map = {
+            "foundational": "beginner",
+            "targeted": "intermediate",
+            "progressive": "advanced",
+        }
+        raw_difficulty = next_task_assignment["difficulty"]
+        safe_difficulty = _difficulty_map.get(raw_difficulty, raw_difficulty)
+        if safe_difficulty not in ("beginner", "intermediate", "advanced"):
+            safe_difficulty = "beginner"
+
         next_task_record = NextTaskRecord(
             next_task_id=next_task_id,
             review_id=review_id,
@@ -232,7 +243,7 @@ class ReviewOrchestrator:
             title=next_task_assignment["title"],
             objective=next_task_assignment["objective"],
             focus_area=next_task_assignment["focus_area"],
-            difficulty=next_task_assignment["difficulty"],
+            difficulty=safe_difficulty,
             reason=next_task_assignment["reason"],
             assigned_at=next_task_assignment["assigned_timestamp"]
         )
