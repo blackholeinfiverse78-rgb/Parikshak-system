@@ -115,7 +115,7 @@ class TaskSelectionEngine:
             )
         else:
             selection_reason = (
-                f"score={score_10:.1f}/10 → {decision_band} | "
+                f"score={score_10:.1f}/10 -> {decision_band} | "
                 f"difficulty={difficulty_band} | "
                 f"graph_key={selection_key}"
             )

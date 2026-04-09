@@ -20,6 +20,7 @@ from .production_decision_engine import production_decision_engine
 from .bucket_integration import bucket_integration
 from .human_in_loop import human_in_loop
 from .domain_router import domain_router
+from .task_selection_engine import task_selection_engine
 
 logger = logging.getLogger("final_convergence")
 
@@ -259,13 +260,22 @@ class FinalConvergenceOrchestrator:
         """
         # Extract canonical data
         score = canonical_result.get("score", 0)
+        score_10 = canonical_result.get("score_10", score / 10 if score else 0)
         status = canonical_result.get("status", "fail")
-        next_task_data = {
-            "assignment_type": canonical_result.get("task_type", "correction"),
-            "difficulty": canonical_result.get("difficulty", "foundational"),
-            "focus_area": canonical_result.get("focus_area", "general"),
-            "reason": canonical_result.get("reason", "Canonical intelligence decision")
-        }
+        decision = "APPROVED" if score_10 >= 6.0 else "REJECTED"
+
+        # Select next task from Niyantran graph (Phase 2)
+        domain_context = supporting_signals.get("domain_weight_overrides") and supporting_signals or None
+        selected = task_selection_engine.select_next_task(
+            score_10=score_10,
+            decision=decision,
+            current_difficulty="beginner",
+            product_context={
+                "product": supporting_signals.get("domain", "parikshak"),
+                "layer": supporting_signals.get("domain_weight_overrides", {}).get("layer", "execution"),
+                "allowed_next_tasks": supporting_signals.get("domain_expected_features", [])
+            }
+        )
         
         # Generate DETERMINISTIC IDs based on content hash + timestamp for traceability
         import hashlib
@@ -286,17 +296,17 @@ class FinalConvergenceOrchestrator:
         api_result = {
             "submission_id": submission_id,
             "submission_timestamp": datetime.now().isoformat(),
-            "attempt_number": 1,  # Will be enhanced for retry tracking
+            "attempt_number": 1,
             "score": score,
             "status": status,
             "readiness_percent": canonical_result.get("readiness_percent", score),
             "next_task_id": next_task_id,
-            "task_type": canonical_result.get("task_type", "correction"),
-            "title": canonical_result.get("title", "Task Assignment"),
-            "difficulty": canonical_result.get("difficulty", "foundational"),
-            "objective": canonical_result.get("objective", "Complete assignment"),
-            "focus_area": canonical_result.get("focus_area", "general"),
-            "reason": canonical_result.get("reason", "Canonical intelligence decision"),
+            "task_type": selected["task_type"],
+            "title": selected["title"],
+            "difficulty": selected["difficulty"],
+            "objective": f"Complete {selected['title']} — selected from Niyantran task graph",
+            "focus_area": selected["decision_band"],
+            "reason": selected["selection_reason"],
             
             # Evidence and metadata
             "missing_features": supporting_signals.get("missing_features", []),
