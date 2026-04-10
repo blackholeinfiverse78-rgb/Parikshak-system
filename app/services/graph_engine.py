@@ -154,6 +154,129 @@ class GraphEngine:
         """Check if task_id exists in the database."""
         return task_id in self._tasks
 
+    def check_completion_signals(
+        self,
+        task_id: str,
+        repo_signals: dict
+    ) -> dict:
+        """
+        Gap 3: Check completion_signals for a task against repo signals.
+        Deterministic — same repo_signals always returns same result.
+
+        Checks each signal keyword against:
+          - repo file paths
+          - component names (tests, docs, routes, services, models)
+          - quality signals (readme_score, documentation_density)
+          - architecture signals (has_layers, modular, layer_count)
+
+        Returns:
+            {
+              task_id, required_signals, met_signals,
+              unmet_signals, completion_ratio, is_complete
+            }
+        """
+        task = self._tasks.get(task_id)
+        if not task:
+            return {
+                "task_id": task_id,
+                "required_signals": [],
+                "met_signals": [],
+                "unmet_signals": [],
+                "completion_ratio": 0.0,
+                "is_complete": False,
+                "error": f"task_id '{task_id}' not in database"
+            }
+
+        required = task.get("completion_signals", [])
+        if not required:
+            return {
+                "task_id": task_id,
+                "required_signals": [],
+                "met_signals": [],
+                "unmet_signals": [],
+                "completion_ratio": 1.0,
+                "is_complete": True
+            }
+
+        # Build a flat searchable text from all repo signals
+        structure   = repo_signals.get("structure", {})
+        components  = repo_signals.get("components", {})
+        quality     = repo_signals.get("quality", {})
+        architecture = repo_signals.get("architecture", {})
+        metadata    = repo_signals.get("metadata", {})
+
+        all_paths = list(structure.get("raw_paths", []))
+        for bucket in components.values():
+            if isinstance(bucket, list):
+                all_paths.extend(bucket)
+        searchable = " ".join(all_paths).lower()
+
+        # Signal → check mapping
+        signal_checks = {
+            # Presence checks
+            "github_repo_present":      bool(metadata.get("name")),
+            "readme_exists":            quality.get("readme_score", 0) >= 1,
+            "api_endpoints_present":    len(components.get("routes", [])) > 0,
+            "folder_structure_present": architecture.get("modular", False),
+            "min_5_files":              structure.get("total_files", 0) >= 5,
+            "min_3_services":           len(components.get("services", [])) >= 3,
+            "min_2_nodes":              structure.get("total_files", 0) >= 2,
+            "tests_present":            len(components.get("tests", [])) > 0,
+            "unit_tests":               len(components.get("tests", [])) > 0,
+            "integration_tests":        any("integr" in p for p in components.get("tests", [])),
+            "api_docs":                 len(components.get("docs", [])) > 0,
+            "service_layer_present":    len(components.get("services", [])) > 0,
+            "db_integration":           any(k in searchable for k in ["db", "database", "model", "schema"]),
+            "jwt_auth_present":         any(k in searchable for k in ["auth", "jwt", "token"]),
+            "docker_compose":           any(k in searchable for k in ["docker", "compose"]),
+            "kubernetes_deployment":    any(k in searchable for k in ["kubernetes", "k8s", "helm"]),
+            "clean_architecture":       architecture.get("layer_count", 0) >= 3,
+            "domain_layer_isolated":    architecture.get("has_layers", False),
+            "infrastructure_separated": architecture.get("layer_count", 0) >= 2,
+            "normalised_schema":        any(k in searchable for k in ["migration", "schema", "model"]),
+            "migrations_present":       any("migrat" in p for p in all_paths),
+            "rubric_implemented":        any(k in searchable for k in ["rubric", "score", "evaluat"]),
+            "binary_criteria":          any(k in searchable for k in ["rubric", "criteria", "binary"]),
+            "deterministic_formula":    any(k in searchable for k in ["formula", "score", "calculat"]),
+            "structured_output":        len(components.get("models", [])) > 0,
+            "pac_detection":            any(k in searchable for k in ["pac", "proof", "architecture"]),
+            "binary_signals":           any(k in searchable for k in ["signal", "binary", "detect"]),
+            "repo_analysis":            bool(metadata.get("name")),
+            "deterministic_pipeline":   architecture.get("layer_count", 0) >= 2,
+            "bucket_logging":           any(k in searchable for k in ["bucket", "log", "storage"]),
+            "same_input_same_output":   len(components.get("tests", [])) > 0,
+            "ros2_package":             any(k in searchable for k in ["ros", "package", "launch"]),
+            "pub_sub_comm":             any(k in searchable for k in ["publish", "subscribe", "topic"]),
+            "launch_file":              any("launch" in p for p in all_paths),
+            "sensor_integrated":        any(k in searchable for k in ["sensor", "lidar", "camera"]),
+            "slam_implemented":         any(k in searchable for k in ["slam", "navigation", "map"]),
+            "solidity_contract":        any(k in searchable for k in ["solidity", ".sol", "contract"]),
+            "hardhat_tests":            any(k in searchable for k in ["hardhat", "test", "mocha"]),
+            "erc20_implemented":        any(k in searchable for k in ["erc20", "token", "transfer"]),
+            "staking_contract":         any(k in searchable for k in ["stake", "staking", "reward"]),
+            "web3_frontend":            any(k in searchable for k in ["web3", "frontend", "react"]),
+            "dashboard_present":        any(k in searchable for k in ["dashboard", "chart", "metric"]),
+            "kpi_metrics":              any(k in searchable for k in ["kpi", "metric", "analytics"]),
+        }
+
+        met   = [s for s in required if signal_checks.get(s, False)]
+        unmet = [s for s in required if not signal_checks.get(s, False)]
+        ratio = len(met) / len(required) if required else 1.0
+
+        logger.info(
+            f"[GRAPH ENGINE] completion_signals for {task_id}: "
+            f"{len(met)}/{len(required)} met (ratio={ratio:.2f})"
+        )
+
+        return {
+            "task_id":          task_id,
+            "required_signals": required,
+            "met_signals":      met,
+            "unmet_signals":    unmet,
+            "completion_ratio": round(ratio, 3),
+            "is_complete":      ratio >= 1.0,
+        }
+
     def get_stats(self) -> Dict[str, Any]:
         """Return database statistics."""
         products = {}

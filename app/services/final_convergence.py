@@ -22,6 +22,7 @@ from .human_in_loop import human_in_loop
 from .domain_router import domain_router
 from .task_selection_engine import task_selection_engine
 from .task_selector import task_selector
+from .graph_engine import graph_engine
 
 logger = logging.getLogger("final_convergence")
 
@@ -48,13 +49,15 @@ class FinalConvergenceOrchestrator:
         }
     
     def process_with_convergence(
-        self, 
+        self,
         task_title: str,
         task_description: str,
         repository_url: Optional[str] = None,
         module_id: str = "task-review-agent",
         schema_version: str = "v1.0",
-        pdf_text: str = ""
+        pdf_text: str = "",
+        current_task_id: Optional[str] = None,
+        submitted_by: str = ""
     ) -> Dict[str, Any]:
         """
         FINAL CONVERGENCE processing with enforced hierarchy
@@ -106,7 +109,6 @@ class FinalConvergenceOrchestrator:
         
         if registry_result.status == ValidationStatus.INVALID:
             logger.warning(f"[FINAL CONVERGENCE] Registry validation failed: {registry_result.reason}")
-            # Return rejection through validation gate with DETERMINISTIC ID
             import hashlib
             content_hash = hashlib.md5(f"{task_title}{task_description}{module_id}{schema_version}".encode(), usedforsecurity=False).hexdigest()[:12]
             rejection_result = {
@@ -122,6 +124,36 @@ class FinalConvergenceOrchestrator:
                 "registry_rejection": True
             }
             return validation_gate.validate_final_output(rejection_result, "registry_rejection")
+
+        # STEP 1.5: Prerequisite Gate (Gap 4)
+        if current_task_id:
+            prerequisites = graph_engine.get_prerequisites(current_task_id)
+            if prerequisites:
+                from ..models.persistent_storage import product_storage
+                completed_ids = set()
+                if submitted_by:
+                    for sub in product_storage.submissions.values():
+                        if sub.submitted_by == submitted_by:
+                            completed_ids.add(sub.task_id)
+                unmet = [p for p in prerequisites if p not in completed_ids]
+                if unmet:
+                    logger.warning(f"[FINAL CONVERGENCE] Prerequisites not met for {current_task_id}: {unmet}")
+                    import hashlib
+                    content_hash = hashlib.md5(f"{task_title}{task_description}".encode(), usedforsecurity=False).hexdigest()[:12]
+                    prereq_task = graph_engine.get_task(unmet[0])
+                    rejection_result = {
+                        "submission_id": f"prereq-blocked-{content_hash}",
+                        "score": 0,
+                        "status": "fail",
+                        "readiness_percent": 0,
+                        "next_task_id": unmet[0],
+                        "task_type": "correction",
+                        "title": prereq_task.get("title", "Prerequisite Task") if prereq_task else "Prerequisite Task",
+                        "difficulty": "beginner",
+                        "failure_reasons": [f"Prerequisites not met: complete {unmet} first"],
+                        "prerequisite_rejection": True
+                    }
+                    return validation_gate.validate_final_output(rejection_result, "prerequisite_rejection")
         
         # STEP 2: Signal Collection (SUPPORTING DATA ONLY)
         logger.info("[FINAL CONVERGENCE] Step 2: Signal Collection (Supporting Data)")

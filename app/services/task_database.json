@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "description": "Parikshak Task Database — 30 tasks across BHIV products with full graph edges",
-  "total_tasks": 30,
+  "description": "Parikshak Task Database — 35 tasks across BHIV products with full graph edges",
+  "total_tasks": 35,
   "tasks": {
 
     "NT-COR-B-001": {
@@ -482,6 +482,102 @@
       "failure_tasks": ["RB-ADV-I-001"],
       "completion_signals": ["slam_implemented", "path_planning", "obstacle_avoidance", "simulation"],
       "dharma": "Autonomy is the goal — a robot that navigates independently has achieved its purpose."
+    },
+
+    "BC-COR-B-001": {
+      "task_id": "BC-COR-B-001",
+      "product": "blockchain",
+      "layer": "execution",
+      "subsystem": "blockchain_engineering",
+      "capability": "smart_contract_development",
+      "title": "Solidity Smart Contract Foundation",
+      "description": "Write and deploy a basic Solidity smart contract with at least 3 functions, unit tests using Hardhat, and deployment to a local testnet.",
+      "difficulty": "beginner",
+      "prerequisites": [],
+      "next_tasks": ["BC-REI-B-001"],
+      "failure_tasks": ["BC-COR-B-001"],
+      "completion_signals": ["solidity_contract", "hardhat_tests", "local_deployment"],
+      "dharma": "The contract is law — write it correctly the first time, because the blockchain never forgets."
+    },
+
+    "BC-REI-B-001": {
+      "task_id": "BC-REI-B-001",
+      "product": "blockchain",
+      "layer": "execution",
+      "subsystem": "blockchain_engineering",
+      "capability": "smart_contract_development",
+      "title": "Token Contract Reinforcement",
+      "description": "Implement an ERC-20 token contract with minting, burning, transfer restrictions, and full test coverage using Hardhat.",
+      "difficulty": "beginner",
+      "prerequisites": ["BC-COR-B-001"],
+      "next_tasks": ["BC-ADV-I-001"],
+      "failure_tasks": ["BC-COR-B-001"],
+      "completion_signals": ["erc20_implemented", "mint_burn_present", "transfer_restrictions", "full_test_coverage"],
+      "dharma": "Tokens are trust — every function must be tested before it touches real value."
+    },
+
+    "BC-ADV-I-001": {
+      "task_id": "BC-ADV-I-001",
+      "product": "blockchain",
+      "layer": "execution",
+      "subsystem": "blockchain_engineering",
+      "capability": "smart_contract_development",
+      "title": "DeFi Staking Protocol",
+      "description": "Build a DeFi staking protocol with reward calculation, lock periods, emergency withdrawal, and a Web3.js frontend integration.",
+      "difficulty": "intermediate",
+      "prerequisites": ["BC-REI-B-001"],
+      "next_tasks": ["BC-ADV-A-001"],
+      "failure_tasks": ["BC-REI-B-001"],
+      "completion_signals": ["staking_contract", "reward_calculation", "lock_periods", "web3_frontend"],
+      "dharma": "DeFi is permissionless finance — the protocol must be fair, transparent, and unstoppable."
+    },
+
+    "BC-ADV-A-001": {
+      "task_id": "BC-ADV-A-001",
+      "product": "blockchain",
+      "layer": "execution",
+      "subsystem": "blockchain_engineering",
+      "capability": "smart_contract_development",
+      "title": "DAO Governance System",
+      "description": "Implement a DAO governance system with proposal creation, voting mechanism, timelock, and on-chain execution of approved proposals.",
+      "difficulty": "advanced",
+      "prerequisites": ["BC-ADV-I-001"],
+      "next_tasks": [],
+      "failure_tasks": ["BC-ADV-I-001"],
+      "completion_signals": ["dao_contract", "voting_mechanism", "timelock", "onchain_execution"],
+      "dharma": "Governance is the highest form of decentralisation — code that governs itself needs no authority."
+    },
+
+    "IF-ADV-I-001": {
+      "task_id": "IF-ADV-I-001",
+      "product": "insightflow",
+      "layer": "intelligence",
+      "subsystem": "analytics",
+      "capability": "performance_reporting",
+      "title": "Analytics Dashboard Build",
+      "description": "Build a real-time analytics dashboard with KPI metrics, trend charts, and candidate performance reports using a REST API backend.",
+      "difficulty": "intermediate",
+      "prerequisites": [],
+      "next_tasks": ["IF-ADV-A-001"],
+      "failure_tasks": ["IF-ADV-I-001"],
+      "completion_signals": ["dashboard_present", "kpi_metrics", "trend_charts", "api_backend"],
+      "dharma": "Insight without action is noise — a dashboard must make the invisible visible."
+    },
+
+    "IF-ADV-A-001": {
+      "task_id": "IF-ADV-A-001",
+      "product": "insightflow",
+      "layer": "intelligence",
+      "subsystem": "analytics",
+      "capability": "performance_reporting",
+      "title": "Predictive Analytics Engine",
+      "description": "Build a rule-based predictive analytics engine that identifies at-risk candidates based on evaluation patterns and generates intervention recommendations.",
+      "difficulty": "advanced",
+      "prerequisites": ["IF-ADV-I-001"],
+      "next_tasks": [],
+      "failure_tasks": ["IF-ADV-I-001"],
+      "completion_signals": ["rule_based_prediction", "risk_identification", "intervention_recommendations"],
+      "dharma": "Prediction is prevention — identify failure before it happens and the system becomes a guardian."
     }
   }
 }

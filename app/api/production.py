@@ -29,6 +29,10 @@ class NiyantranTaskRequest(BaseModel):
     pdf_text: str = Field(default="")
     priority: str = Field(default="normal")
     deadline: Optional[str] = None
+    # Gap 1: current_task_id from Niyantran enables graph traversal
+    # When provided, graph_engine.traverse() follows the correct edge
+    # When None (default), falls back to score/decision-based selection
+    current_task_id: Optional[str] = Field(default=None, description="Current task_id from Niyantran graph — enables deterministic graph traversal")
 
 class HumanOverrideRequest(BaseModel):
     case_id: str = Field(..., min_length=1)

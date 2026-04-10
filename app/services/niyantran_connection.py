@@ -35,6 +35,7 @@ class NiyantranTask:
     deadline: Optional[str] = None
     trace_id: str = ""  # Phase 5: must come from Niyantran
     product_context: Optional[Dict[str, Any]] = None  # Phase 3: injected by Mandala Mapper
+    current_task_id: Optional[str] = None  # Gap 1: enables graph traversal when provided by Niyantran
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "NiyantranTask":
@@ -63,7 +64,8 @@ class NiyantranTask:
             priority=data.get("priority", "normal"),
             deadline=data.get("deadline"),
             trace_id=trace_id,
-            product_context=product_context
+            product_context=product_context,
+            current_task_id=data.get("current_task_id")
         )
 
 @dataclass
@@ -141,17 +143,22 @@ class NiyantranConnectionService:
                 evaluation_result.get("packet_data")
             )
 
-            # Step 4: Context-aware task selection (Phase 5)
+            # Step 4: Context-aware task selection — uses graph_engine if current_task_id provided
             score_10   = evaluation_result["evaluation"].get("score_10", 0)
             decision   = decision_result.get("decision", "REJECTED")
             difficulty = evaluation_result["evaluation"].get("difficulty", "beginner")
-            next_task_result = task_selection_engine.select_next_task(
+            from .task_selector import task_selector
+            next_task_result = task_selector.select(
                 score_10=score_10,
                 decision=decision,
+                task_title=niyantran_task.task_title,
+                task_description=niyantran_task.task_description,
+                current_task_id=niyantran_task.current_task_id,
                 current_difficulty=difficulty,
-                product_context=product_context
             )
-
+            # Normalise key name for downstream compatibility
+            if "task_id" in next_task_result and "next_task_id" not in next_task_result:
+                next_task_result["next_task_id"] = next_task_result["task_id"]
             # Step 5: Log to bucket with Niyantran trace_id + context
             bucket_integration.log_evaluation(
                 evaluation_result["evaluation"],

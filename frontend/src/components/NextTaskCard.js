@@ -88,6 +88,40 @@ const NextTaskCard = ({ task }) => {
                                 </div>
                             </div>
                         </div>
+
+                        {task?.dharma && (
+                            <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-purple-500 mt-0.5 text-lg leading-none">&#9670;</span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-tight">Dharma</div>
+                                            <TtsButton text={task.dharma} lang="en" tone="educational" />
+                                        </div>
+                                        <p className="text-sm text-purple-700 dark:text-purple-300 italic leading-snug font-medium">
+                                            {task.dharma}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {task?.dharma && (
+                            <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-purple-500 mt-0.5 text-base">&#9670;</span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-tight">Dharma</div>
+                                            <TtsButton text={task.dharma} lang="en" tone="educational" />
+                                        </div>
+                                        <p className="text-sm text-purple-700 dark:text-purple-300 italic mt-1 leading-snug font-medium">
+                                            {task.dharma}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
