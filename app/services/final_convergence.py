@@ -21,6 +21,7 @@ from .bucket_integration import bucket_integration
 from .human_in_loop import human_in_loop
 from .domain_router import domain_router
 from .task_selection_engine import task_selection_engine
+from .task_selector import task_selector
 
 logger = logging.getLogger("final_convergence")
 
@@ -264,17 +265,14 @@ class FinalConvergenceOrchestrator:
         status = canonical_result.get("status", "fail")
         decision = "APPROVED" if score_10 >= 6.0 else "REJECTED"
 
-        # Select next task from Niyantran graph (Phase 2)
-        domain_context = supporting_signals.get("domain_weight_overrides") and supporting_signals or None
-        selected = task_selection_engine.select_next_task(
+        # Select next task via unified TaskSelector (graph_engine + mandala + niyantran)
+        selected = task_selector.select(
             score_10=score_10,
             decision=decision,
+            task_title=task_title,
+            task_description=task_description,
+            current_task_id=None,
             current_difficulty="beginner",
-            product_context={
-                "product": supporting_signals.get("domain", "parikshak"),
-                "layer": supporting_signals.get("domain_weight_overrides", {}).get("layer", "execution"),
-                "allowed_next_tasks": supporting_signals.get("domain_expected_features", [])
-            }
         )
         
         # Generate DETERMINISTIC IDs based on content hash + timestamp for traceability
@@ -304,9 +302,11 @@ class FinalConvergenceOrchestrator:
             "task_type": selected["task_type"],
             "title": selected["title"],
             "difficulty": selected["difficulty"],
-            "objective": f"Complete {selected['title']} — selected from Niyantran task graph",
-            "focus_area": selected["decision_band"],
+            "objective": selected["objective"],
+            "focus_area": selected.get("subsystem") or selected.get("decision_band", "general"),
             "reason": selected["selection_reason"],
+            "dharma": selected.get("dharma", ""),
+            "completion_signals": selected.get("completion_signals", []),
             
             # Evidence and metadata
             "missing_features": supporting_signals.get("missing_features", []),
