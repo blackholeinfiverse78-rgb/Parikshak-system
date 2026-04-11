@@ -45,6 +45,11 @@ Submission Input
     │  confidence < 0.98 → flag requires_human_review=true
     │  Escalation cases persisted to storage/escalations/
     ▼
+[Step 5.5] Task Selector & Graph Traverser (task_selector.py)
+    │  Phase 9: Mandala Mapping & Graph Traversal
+    │  Mandala Mapper: product -> layer -> subsystem -> capability mapping
+    │  Graph Engine: deterministic next_task branching based on score
+    ▼
 [Step 6] Validation Gate (shraddha_validation.py) — FINAL WRAPPER
     │  Contract enforcement, type checking, field correction
     ▼
@@ -121,11 +126,16 @@ Verified across 3 identical runs: score=7.2, decision=APPROVED, status=pass.
     "requires_human_review": false
   },
   "next_task": {
-    "task_id": "next-20260101120000",
+    "task_id": "NT-REI-B-001",
     "task_type": "advancement",
-    "title": "Advanced Features Challenge",
-    "difficulty": "advanced",
-    "next_direction": "Advance to next complexity level"
+    "title": "REST API Reinforcement Task",
+    "difficulty": "beginner",
+    "next_direction": "Advance to next complexity level",
+    "product": "niyantran",
+    "layer": "governance",
+    "branch": "pass",
+    "selection_reason": "graph_traversal: NT-COR-B-001 + pass -> next_tasks[0] = NT-REI-B-001",
+    "source": "task_graph"
   },
   "processing_metadata": {
     "processing_time_ms": 1240,
@@ -175,6 +185,7 @@ All outputs validated by `shraddha_validation.py`:
 - Bucket Logging (Phase 6): ✅ Mandatory, no exceptions
 - Human-in-Loop (Phase 7): ✅ Confidence threshold 0.98
 - Niyantran Connection (Phase 8): ✅ `/api/v1/production/niyantran/submit`
+- Core Context System (Phase 9): ✅ Mandala mapped + Deterministic Graph DB implemented
 - Domain Routing: ✅ 5 domains detected
 - Escalation Persistence: ✅ Written to storage/escalations/
 

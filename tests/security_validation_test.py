@@ -333,7 +333,7 @@ def test_environment_security():
     # Check if .env is in .gitignore
     gitignore_path = ".gitignore"
     if os.path.exists(gitignore_path):
-        with open(gitignore_path, 'r') as f:
+        with open(gitignore_path, 'r', encoding='utf-8') as f:
             gitignore_content = f.read()
         
         if ".env" in gitignore_content:

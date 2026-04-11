@@ -219,8 +219,8 @@ def test_error_handling_security():
     # Test 1: Check if stack traces are exposed
     try:
         # Simulate error condition
-        from app.services.assignment_authority import assignment_authority
-        result = assignment_authority.evaluate_assignment_readiness(
+        from app.services.assignment_engine import assignment_engine
+        result = assignment_engine.evaluate_and_assign(
             task_title=None,  # This should cause an error
             task_description=None,
             supporting_signals={}
@@ -292,7 +292,7 @@ def test_logging_security():
     print("="*60)
     
     # Test 1: Check if sensitive data is logged
-    from app.services.assignment_authority import assignment_authority
+    from app.services.assignment_engine import assignment_engine
     import logging
     
     # Capture log output
@@ -363,7 +363,7 @@ def run_functionality_tests():
     
     # Test 1: Assignment Authority
     try:
-        from app.services.assignment_authority import assignment_authority
+        from app.services.assignment_engine import assignment_engine
         
         supporting_signals = {
             "expected_vs_delivered_evidence": {
@@ -373,16 +373,22 @@ def run_functionality_tests():
             },
             "missing_features": ["feature1", "feature2"],
             "failure_indicators": ["repository_not_found"],
-            "repository_available": False
+            "repository_available": False,
+            "repository_signals": {
+                "structure": {"total_files": 0},
+                "components": {},
+                "architecture": {},
+                "quality": {"readme_score": 0}
+            }
         }
         
-        result = assignment_authority.evaluate_assignment_readiness(
+        result = assignment_engine.evaluate_and_assign(
             "Test Task",
             "Test Description",
             supporting_signals
         )
         
-        if result.get("authority_level") == "PRIMARY_CANONICAL":
+        if result.get("canonical_authority") == True:
             log_test("Assignment Authority", "PASS", "Assignment Authority working correctly")
         else:
             log_test("Assignment Authority", "FAIL", "Assignment Authority not working")
